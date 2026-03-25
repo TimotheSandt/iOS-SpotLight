@@ -9,9 +9,13 @@ import SwiftUI
 
 @main
 struct SpotLightApp: App {
+    
+    let mediaViewModel = MediaViewModel()
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            GlobalView()
+                .environment(mediaViewModel)
         }
     }
 }
