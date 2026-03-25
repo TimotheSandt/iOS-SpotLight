@@ -1,31 +1,38 @@
 name: SwiftUI Preview Renders
 
-# Quand est-ce que ça se déclenche ?
 on:
-  # À chaque push qui modifie un fichier dans PreviewRenders/
   push:
     paths:
-      - "PreviewRenders/**/*.swift"
-  # Permet aussi de déclencher manuellement depuis GitHub
-  workflow_dispatch:
+      - "**/*.swift"
+  workflow_dispatch:  # Permet de lancer manuellement
 
 jobs:
   render:
-    runs-on: macos-15    # Runner macOS gratuit (repos publics)
+    runs-on: macos-15
 
     steps:
-      # 1. Récupérer le code du repo
+      # 1. Récupérer le code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Installer swiftui-render via Homebrew
+      # 2. Générer les fichiers de preview autonomes
+      - name: Generate self-contained preview files
+        run: python3 generate_previews.py .
+
+      # 3. Lister les fichiers générés (debug)
+      - name: List generated previews
+        run: |
+          echo "📁 Fichiers générés :"
+          ls -la PreviewRenders/ || echo "Aucun fichier généré"
+
+      # 4. Installer swiftui-render
       - name: Install swiftui-render
         run: |
           brew tap olliewagner/swiftui-render
           brew install swiftui-render
 
-      # 3. Render tous les fichiers Swift dans PreviewRenders/
-      - name: Render all preview files
+      # 5. Render tous les previews en light + dark
+      - name: Render all previews
         run: |
           mkdir -p rendered/light rendered/dark
 
@@ -33,23 +40,84 @@ jobs:
             [ -f "$f" ] || continue
             base="$(basename "$f" .swift)"
 
-            echo "🎨 Rendering $base (light + dark)..."
+            echo ""
+            echo "🎨 Rendering $base..."
 
-            # Rendu light mode - iPhone 15
+            # Light mode
             swiftui-render render "$f" \
               --iphone \
               --device-frame \
-              -o "rendered/light/${base}.png"
+              -o "rendered/light/${base}.png" \
+              || echo "⚠️ Échec du rendu light pour $base"
 
-            # Rendu dark mode - iPhone 15
+            # Dark mode
             swiftui-render render "$f" \
               --iphone \
               --device-frame \
               --dark \
-              -o "rendered/dark/${base}.png"
+              -o "rendered/dark/${base}.png" \
+              || echo "⚠️ Échec du rendu dark pour $base"
           done
 
-      # 4. Uploader les images comme artifacts téléchargeables
+          echo ""
+          echo "✅ Rendu terminé :"
+          find rendered -name "*.png" | sort
+
+      # 6. Générer une page HTML pour voir les previews facilement
+      - name: Generate preview gallery
+        run: |
+          cat > rendered/index.html << 'HTMLEOF'
+          <!DOCTYPE html>
+          <html lang="fr">
+          <head>
+            <meta charset="UTF-8">
+            <title>SwiftUI Previews</title>
+            <style>
+              body { font-family: -apple-system, system-ui, sans-serif; background: #1a1a2e; color: white; padding: 40px; }
+              h1 { text-align: center; margin-bottom: 40px; }
+              .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; max-width: 1400px; margin: 0 auto; }
+              .card { background: #16213e; border-radius: 16px; padding: 20px; }
+              .card h2 { font-size: 16px; margin: 0 0 16px 0; color: #a8b2d1; }
+              .modes { display: flex; gap: 16px; }
+              .mode { flex: 1; text-align: center; }
+              .mode img { max-width: 100%; border-radius: 12px; border: 1px solid #2a2a4a; }
+              .mode p { font-size: 12px; color: #666; margin-top: 8px; }
+              .meta { margin-top: 30px; text-align: center; font-size: 12px; color: #444; }
+            </style>
+          </head>
+          <body>
+            <h1>📱 SwiftUI Previews</h1>
+            <div class="grid">
+          HTMLEOF
+
+          for f in rendered/light/*.png; do
+            [ -f "$f" ] || continue
+            base="$(basename "$f" .png)"
+            cat >> rendered/index.html << CARDEOF
+              <div class="card">
+                <h2>${base}</h2>
+                <div class="modes">
+                  <div class="mode">
+                    <img src="light/${base}.png" alt="${base} light">
+                    <p>Light</p>
+                  </div>
+                  <div class="mode">
+                    <img src="dark/${base}.png" alt="${base} dark">
+                    <p>Dark</p>
+                  </div>
+                </div>
+              </div>
+          CARDEOF
+          done
+
+          cat >> rendered/index.html << 'HTMLEOF'
+            </div>
+            <p class="meta">Généré automatiquement par GitHub Actions</p>
+          </body>
+          </html>
+          HTMLEOF
+
+      # 7. Uploader les résultats
       - name: Upload rendered previews
         uses: actions/upload-artifact@v4
         with:
