@@ -252,6 +252,13 @@ jobs:
                   "",
                   "#if canImport(UIKit)",
                   "import UIKit",
+                  "#elseif canImport(AppKit)",
+                  "import AppKit",
+                  "typealias UIColor = NSColor",
+                  "extension NSColor {",
+                  "    static var systemBackground: NSColor { windowBackgroundColor }",
+                  "    static var systemGroupedBackground: NSColor { windowBackgroundColor }",
+                  "}",
                   "#endif",
                   "",
               ]
