@@ -352,21 +352,27 @@ jobs:
             base="$(basename "$f" .swift)"
             echo ""
             echo "Rendering $base..."
-            swiftui-render render "$f" --backend catalyst --iphone --device-frame \
-              -o "rendered/light/${base}.png"
-            if [ $? -ne 0 ]; then
+            light_out="rendered/light/${base}.png"
+            swiftui-render render "$f" --iphone --device-frame -o "$light_out"
+            if [ $? -ne 0 ] || [ ! -f "$light_out" ]; then
               echo "Echec light: $base" | tee -a rendered/render-errors.txt
               failures=1
             fi
-            swiftui-render render "$f" --backend catalyst --iphone --device-frame --dark \
-              -o "rendered/dark/${base}.png"
-            if [ $? -ne 0 ]; then
+            dark_out="rendered/dark/${base}.png"
+            swiftui-render render "$f" --iphone --device-frame --dark -o "$dark_out"
+            if [ $? -ne 0 ] || [ ! -f "$dark_out" ]; then
               echo "Echec dark: $base" | tee -a rendered/render-errors.txt
               failures=1
             fi
           done
           echo ""
           find rendered -name "*.png" | sort
+          png_count="$(find rendered -name '*.png' | wc -l | tr -d ' ')"
+          echo "PNG generated: $png_count"
+          if [ "$png_count" -eq 0 ]; then
+            echo "Aucun PNG genere" | tee -a rendered/render-errors.txt
+            failures=1
+          fi
           if [ $failures -ne 0 ]; then
             echo ""
             echo "Previews en erreur:"
@@ -376,7 +382,9 @@ jobs:
 
       - name: Generate preview gallery
         run: |
-          COMMIT_SHA="${GITHUB_SHA::7}"
+          COMMIT_SHA_SHORT="${GITHUB_SHA::7}"
+          COMMIT_SHA_FULL="${GITHUB_SHA}"
+          COMMIT_URL="https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
           COMMIT_MSG=$(git log -1 --pretty=%s)
           TIMESTAMP=$(date -u +"%d/%m/%Y %H:%M UTC")
 
@@ -393,6 +401,8 @@ jobs:
               h1{text-align:center;margin-bottom:8px;font-size:28px}
               .meta{text-align:center;color:#8b949e;font-size:13px;margin-bottom:40px}
               .meta code{background:#161b22;padding:2px 8px;border-radius:4px;color:#58a6ff;font-size:12px}
+              .meta a{color:#58a6ff;text-decoration:none}
+              .meta a:hover{text-decoration:underline}
               .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:24px;max-width:1400px;margin:0 auto}
               .card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:20px;transition:border-color .2s}
               .card:hover{border-color:#58a6ff}
@@ -414,7 +424,10 @@ jobs:
           <body>
             <h1>SwiftUI Previews</h1>
             <p class="meta">
-              Commit <code>${COMMIT_SHA}</code> — ${COMMIT_MSG}<br>
+              Rendus issus du commit
+              <a href="${COMMIT_URL}" target="_blank" rel="noopener noreferrer"><code>${COMMIT_SHA_SHORT}</code></a><br>
+              <code>${COMMIT_SHA_FULL}</code><br>
+              ${COMMIT_MSG}<br>
               ${TIMESTAMP}
             </p>
             <div class="grid">
@@ -483,4 +496,5 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
 
