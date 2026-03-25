@@ -261,6 +261,21 @@ jobs:
                   "}",
                   "#endif",
                   "",
+                  "#if canImport(AppKit)",
+                  "extension View {",
+                  "    func navigationBarTitle(_ title: String) -> some View {",
+                  "        self.navigationTitle(title)",
+                  "    }",
+                  "    func navigationBarTitle(_ title: String, displayMode: NavigationBarItem.TitleDisplayMode) -> some View {",
+                  "        self.navigationTitle(title).navigationBarTitleDisplayMode(displayMode)",
+                  "    }",
+                  "}",
+                  "@ViewBuilder",
+                  "func Tab<Content: View>(_ title: String, systemImage: String, @ViewBuilder content: () -> Content) -> some View {",
+                  "    content().tabItem { Label(title, systemImage: systemImage) }",
+                  "}",
+                  "#endif",
+                  "",
               ]
               used = {"SwiftUI"}
               for i in preview.imports:
