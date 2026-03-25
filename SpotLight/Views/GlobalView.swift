@@ -10,16 +10,20 @@ import SwiftUI
 struct GlobalView: View {
     var body: some View {
         TabView {
-            Tab("Journal", systemImage: "book") {
-                JournalView()
-            }
-            Tab("Statistiques", systemImage: "chart.bar") {
-                EmptyView()
-            }
-            Tab("Profil", systemImage: "person") {
-                EmptyView()
-            }
-            
+            JournalView()
+                .tabItem {
+                    Label("Journal", systemImage: "book")
+                }
+
+            EmptyView()
+                .tabItem {
+                    Label("Statistiques", systemImage: "chart.bar")
+                }
+
+            EmptyView()
+                .tabItem {
+                    Label("Profil", systemImage: "person")
+                }
         }
     }
 }
