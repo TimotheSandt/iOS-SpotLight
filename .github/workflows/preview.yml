@@ -212,6 +212,8 @@ jobs:
         run: |
           brew tap olliewagner/swiftui-render
           brew install swiftui-render
+          swiftui-render daemon build
+          swiftui-render daemon start
 
       - name: Render all previews
         run: |
@@ -221,13 +223,14 @@ jobs:
             base="$(basename "$f" .swift)"
             echo ""
             echo "Rendering $base..."
-            swiftui-render render "$f" --iphone --device-frame --backend catalyst \
+            swiftui-render render "$f" --iphone --device-frame --daemon \
               -o "rendered/light/${base}.png" \
               || echo "Echec light: $base"
-            swiftui-render render "$f" --iphone --device-frame --backend catalyst --dark \
+            swiftui-render render "$f" --iphone --device-frame --daemon --dark \
               -o "rendered/dark/${base}.png" \
               || echo "Echec dark: $base"
           done
+          swiftui-render daemon stop
           echo ""
           find rendered -name "*.png" | sort
 
