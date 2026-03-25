@@ -7,8 +7,13 @@
 
 import Foundation
 
+enum MediaType: String, CaseIterable, Codable {
+    case film = "Film"
+    case serie = "Serie"
+}
+
 enum Genre: String, CaseIterable, Codable {
-    case scienceFiction = "Science Fiction"
+    case scifi = "Science Fiction"
     case fantasy = "Fantasy"
     case horror = "Horror"
     case comedy = "Comedy"
@@ -27,8 +32,8 @@ enum Platform: String, CaseIterable, Codable {
 
 enum Status: String, CaseIterable, Codable {
     case all = "Tous"
-    case toWatch = "À voir"
+    case wishlist = "Wishlist"
     case watching = "En cours"
-    case watched = "Terminé"
+    case watched = "Vu"
     case abandoned = "Abandonné"
 }

@@ -20,32 +20,36 @@ struct JournalView: View {
     
     var body: some View {
         NavigationStack {
-            VStack {
-                Picker("Select status", selection: $selectedStatus) {
-                    ForEach(Status.allCases, id: \.self) { type in
-                        Text(type.rawValue).tag(type)
+            ScrollView {
+                VStack {
+                    Picker("Select status", selection: $selectedStatus) {
+                        ForEach(Status.allCases, id: \.self) { type in
+                            Text(type.rawValue).tag(type)
+                        }
                     }
-                }
-                .pickerStyle(.segmented)
-                
-                Text("filter")
-                
-                LazyVGrid(columns: columns, spacing: 20) {
-                    ForEach(data.media, id: \.id) { item in
-                        MediaCardView(media: item)
+                    .pickerStyle(.segmented)
+                    
+                    Text("filter")
+                    
+                    LazyVGrid(columns: columns, spacing: 20) {
+                        ForEach(data.media, id: \.id) { item in
+                            MediaCardView(media: item)
+                        }
                     }
+                    .padding(.horizontal)
+                    
                 }
-                .padding(.horizontal)
-                
-            }
-            .navigationBarTitle("SpotLight")
-            .navigationDestination(for: Bool.self) {_ in
-                EmptyView()
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink(value: true) {
-                        Text("Add")
+                .listStyle(.plain)
+                .navigationBarTitle("SpotLight")
+                .navigationDestination(for: Bool.self) {_ in
+                    AddMediaView()
+                    
+                }
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        NavigationLink(value: true) {
+                            Text("Add")
+                        }
                     }
                 }
             }
