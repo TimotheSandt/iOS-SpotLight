@@ -24,22 +24,39 @@ jobs:
         run: |
           cat << 'PYSCRIPT' > /tmp/generate_previews.py
           #!/usr/bin/env python3
-          import os, re, sys
+          import os
+          import re
+          import sys
           from pathlib import Path
           from dataclasses import dataclass, field
 
-          IGNORED_DIRS = {".build","build","DerivedData","Pods",".git","PreviewRenders","Packages",".swiftpm","node_modules"}
-          SYSTEM_MODULES = {"SwiftUI","Foundation","UIKit","Combine","SwiftData","CoreData","MapKit","Charts","PhotosUI","AVFoundation","CoreLocation","CoreImage","WebKit","StoreKit","WidgetKit","AppIntents","Observation"}
+          IGNORED_DIRS = {
+              ".build", "build", "DerivedData", "Pods", ".git",
+              "PreviewRenders", "Packages", ".swiftpm", "node_modules"
+          }
+          SYSTEM_MODULES = {
+              "SwiftUI", "Foundation", "UIKit", "Combine", "SwiftData",
+              "CoreData", "MapKit", "Charts", "PhotosUI", "AVFoundation",
+              "CoreLocation", "CoreImage", "WebKit", "StoreKit",
+              "WidgetKit", "AppIntents", "Observation"
+          }
           OUTPUT_DIR = "PreviewRenders"
 
           @dataclass
           class TypeDef:
-              name: str; kind: str; file_path: str; source_code: str; start_line: int
+              name: str
+              kind: str
+              file_path: str
+              source_code: str
+              start_line: int
               dependencies: set = field(default_factory=set)
 
           @dataclass
           class PreviewBlock:
-              file_path: str; file_name: str; source_code: str; parent_view: str | None
+              file_path: str
+              file_name: str
+              source_code: str
+              parent_view: str | None
               imports: list = field(default_factory=list)
 
           def find_swift_files(path):
@@ -47,108 +64,202 @@ jobs:
               for root, dirs, fnames in os.walk(path):
                   dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
                   for f in fnames:
-                      if f.endswith(".swift"): files.append(os.path.join(root, f))
+                      if f.endswith(".swift") and not f.startswith("._"):
+                          files.append(os.path.join(root, f))
               return files
 
           def extract_balanced(text, pos):
-              if pos >= len(text) or text[pos] != '{': return None
-              depth = 0; i = pos; in_str = False; in_lc = False; in_bc = False; esc = False
+              if pos >= len(text) or text[pos] != "{":
+                  return None
+              depth = 0
+              i = pos
+              in_str = False
+              in_lc = False
+              in_bc = False
+              esc = False
               while i < len(text):
                   ch = text[i]
-                  if esc: esc = False; i += 1; continue
+                  if esc:
+                      esc = False
+                      i += 1
+                      continue
                   if in_lc:
-                      if ch == '\n': in_lc = False
-                      i += 1; continue
+                      if ch == "\n":
+                          in_lc = False
+                      i += 1
+                      continue
                   if in_bc:
-                      if ch == '*' and i+1 < len(text) and text[i+1] == '/': in_bc = False; i += 2; continue
-                      i += 1; continue
-                  if ch == '\\' and in_str: esc = True; i += 1; continue
+                      if ch == "*" and i + 1 < len(text) and text[i + 1] == "/":
+                          in_bc = False
+                          i += 2
+                          continue
+                      i += 1
+                      continue
+                  if ch == "\\" and in_str:
+                      esc = True
+                      i += 1
+                      continue
                   if ch == '"' and not in_str:
-                      if text[i:i+3] == '"""':
-                          end = text.find('"""', i+3)
-                          if end != -1: i = end + 3; continue
-                      in_str = True; i += 1; continue
-                  if ch == '"' and in_str: in_str = False; i += 1; continue
+                      if text[i:i + 3] == '"""':
+                          end = text.find('"""', i + 3)
+                          if end != -1:
+                              i = end + 3
+                              continue
+                      in_str = True
+                      i += 1
+                      continue
+                  if ch == '"' and in_str:
+                      in_str = False
+                      i += 1
+                      continue
                   if not in_str:
-                      if ch == '/' and i+1 < len(text):
-                          if text[i+1] == '/': in_lc = True; i += 2; continue
-                          elif text[i+1] == '*': in_bc = True; i += 2; continue
-                      if ch == '{': depth += 1
-                      elif ch == '}':
+                      if ch == "/" and i + 1 < len(text):
+                          if text[i + 1] == "/":
+                              in_lc = True
+                              i += 2
+                              continue
+                          if text[i + 1] == "*":
+                              in_bc = True
+                              i += 2
+                              continue
+                      if ch == "{":
+                          depth += 1
+                      elif ch == "}":
                           depth -= 1
-                          if depth == 0: return text[pos:i+1]
+                          if depth == 0:
+                              return text[pos:i + 1]
                   i += 1
               return None
 
           def parse_types(fp, src):
               types = []
-              pat = re.compile(r'^[ \t]*(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:public|private|internal|fileprivate|open)\s+)?(?:final\s+)?(struct|class|enum|protocol|actor)\s+(\w+)', re.MULTILINE)
+              pat = re.compile(
+                  r"^[ \t]*(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:public|private|internal|fileprivate|open)\s+)?"
+                  r"(?:final\s+)?(struct|class|enum|protocol|actor)\s+(\w+)",
+                  re.MULTILINE,
+              )
               for m in pat.finditer(src):
                   kind, name = m.group(1), m.group(2)
                   after = src[m.end():]
-                  bo = after.find('{')
-                  if bo == -1: continue
+                  bo = after.find("{")
+                  if bo == -1:
+                      continue
                   bp = m.end() + bo
                   block = extract_balanced(src, bp)
-                  if not block: continue
+                  if not block:
+                      continue
                   ds = m.start()
-                  lines = src[:ds].split('\n'); attrs = []
+                  lines = src[:ds].split("\n")
+                  attrs = []
                   for l in reversed(lines):
                       s = l.strip()
-                      if s.startswith('@') or s.startswith('//'): attrs.insert(0, l)
-                      else: break
+                      if s.startswith("@") or s.startswith("//"):
+                          attrs.insert(0, l)
+                      else:
+                          break
                   if attrs:
-                      full = '\n'.join(attrs) + '\n' + src[ds:bp] + block
+                      full = "\n".join(attrs) + "\n" + src[ds:bp] + block
                   else:
                       full = src[ds:bp] + block
-                  types.append(TypeDef(name=name, kind=kind, file_path=fp, source_code=full, start_line=src[:ds].count('\n')+1))
+                  types.append(
+                      TypeDef(
+                          name=name,
+                          kind=kind,
+                          file_path=fp,
+                          source_code=full,
+                          start_line=src[:ds].count("\n") + 1,
+                      )
+                  )
               return types
 
           def parse_previews(fp, src):
-              previews = []; fn = Path(fp).stem
-              imports = re.findall(r'^import\s+(\w+)', src, re.MULTILINE)
-              pat = re.compile(r'#Preview(?:\s*\([^)]*\))?\s*\{')
+              previews = []
+              fn = Path(fp).stem
+              imports = re.findall(r"^import\s+(\w+)", src, re.MULTILINE)
+              pat = re.compile(r"#Preview(?:\s*\([^)]*\))?\s*\{")
+              swiftui = {
+                  "VStack", "HStack", "ZStack", "Text", "Image", "Button", "NavigationStack", "NavigationView",
+                  "List", "Form", "ScrollView", "LazyVGrid", "LazyHGrid", "Section", "Group", "ForEach", "TabView",
+                  "NavigationSplitView", "Spacer", "Divider", "Color", "Circle", "Rectangle", "RoundedRectangle",
+                  "Capsule", "Toggle", "TextField", "Picker", "Slider", "Stepper", "DatePicker", "ProgressView",
+                  "Label", "Link", "Menu", "Sheet", "Alert", "UUID", "Date", "URL", "String", "Int", "Double",
+                  "Bool", "CGFloat", "CGSize", "CGPoint", "Font", "EdgeInsets",
+              }
               for m in pat.finditer(src):
-                  bp = src.rfind('{', m.start(), m.end()+1)
-                  if bp == -1: bp = m.end()-1
+                  bp = src.rfind("{", m.start(), m.end() + 1)
+                  if bp == -1:
+                      bp = m.end() - 1
                   block = extract_balanced(src, bp)
-                  if not block: continue
+                  if not block:
+                      continue
                   psrc = src[m.start():bp] + block
                   pv = None
-                  swiftui = {"VStack","HStack","ZStack","Text","Image","Button","NavigationStack","NavigationView","List","Form","ScrollView","LazyVGrid","LazyHGrid","Section","Group","ForEach","TabView","NavigationSplitView","Spacer","Divider","Color","Circle","Rectangle","RoundedRectangle","Capsule","Toggle","TextField","Picker","Slider","Stepper","DatePicker","ProgressView","Label","Link","Menu","Sheet","Alert","UUID","Date","URL","String","Int","Double","Bool","CGFloat","CGSize","CGPoint","Font","EdgeInsets"}
-                  for v in re.findall(r'\b([A-Z]\w+)\s*\(', block):
-                      if v not in swiftui: pv = v; break
-                  previews.append(PreviewBlock(file_path=fp, file_name=fn, source_code=psrc, parent_view=pv, imports=imports))
+                  for v in re.findall(r"\b([A-Z]\w+)\s*\(", block):
+                      if v not in swiftui:
+                          pv = v
+                          break
+                  previews.append(
+                      PreviewBlock(file_path=fp, file_name=fn, source_code=psrc, parent_view=pv, imports=imports)
+                  )
               return previews
 
           def find_refs(src, known):
               refs = set()
               for tn in known:
-                  pats = [rf'\b{re.escape(tn)}\s*\(', rf'\b{re.escape(tn)}\s*\.', rf':\s*{re.escape(tn)}\b', rf':\s*\[{re.escape(tn)}\]', rf'<{re.escape(tn)}>', rf'\b{re.escape(tn)}\s*\?', rf'\bis\s+{re.escape(tn)}\b', rf'\bas\s+{re.escape(tn)}\b']
+                  pats = [
+                      rf"\b{re.escape(tn)}\s*\(",
+                      rf"\b{re.escape(tn)}\s*\.",
+                      rf":\s*{re.escape(tn)}\b",
+                      rf":\s*any\s+{re.escape(tn)}\b",
+                      rf":\s*some\s+{re.escape(tn)}\b",
+                      rf":\s*\[{re.escape(tn)}\]",
+                      rf":\s*\[\s*any\s+{re.escape(tn)}\s*\]",
+                      rf"<{re.escape(tn)}>",
+                      rf"\b{re.escape(tn)}\s*\?",
+                      rf"\bis\s+{re.escape(tn)}\b",
+                      rf"\bas\s+{re.escape(tn)}\b",
+                      rf"\b{re.escape(tn)}\s*:",
+                  ]
                   for p in pats:
-                      if re.search(p, src): refs.add(tn); break
+                      if re.search(p, src):
+                          refs.add(tn)
+                          break
               return refs
 
           def resolve(targets, all_t, resolved=None, depth=0):
-              if resolved is None: resolved = set()
-              if depth > 20: return []
-              result = []; known = set(all_t.keys())
+              if resolved is None:
+                  resolved = set()
+              if depth > 20:
+                  return []
+              result = []
+              known = set(all_t.keys())
               for tn in targets:
-                  if tn in resolved or tn not in all_t: continue
-                  resolved.add(tn); td = all_t[tn]
+                  if tn in resolved or tn not in all_t:
+                      continue
+                  resolved.add(tn)
+                  td = all_t[tn]
                   subs = find_refs(td.source_code, known - resolved)
-                  if subs: result.extend(resolve(subs, all_t, resolved, depth+1))
+                  if subs:
+                      result.extend(resolve(subs, all_t, resolved, depth + 1))
                   result.append(td)
               return result
 
           def generate(preview, all_t, same_file):
-              lines = [f"// Auto-generated by generate_previews.py", f"// Source: {preview.file_path}", f"// Ne pas modifier — regenere automatiquement.", ""]
+              lines = [
+                  "// Auto-generated by generate_previews.py",
+                  f"// Source: {preview.file_path}",
+                  "// Do not edit manually; regenerated by CI.",
+                  "",
+              ]
               used = {"SwiftUI"}
               for i in preview.imports:
-                  if i in SYSTEM_MODULES: used.add(i)
-              for i in sorted(used): lines.append(f"import {i}")
+                  if i in SYSTEM_MODULES:
+                      used.add(i)
+              for i in sorted(used):
+                  lines.append(f"import {i}")
               lines.append("")
-              sfn = {td.name for td in same_file}; known = set(all_t.keys())
+              sfn = {td.name for td in same_file}
+              known = set(all_t.keys())
               pr = find_refs(preview.source_code, known)
               resolved = resolve(sfn | pr, all_t)
               seen = set()
@@ -157,36 +268,47 @@ jobs:
                       seen.add(td.name)
                       lines.extend([f"// -- {td.kind} {td.name} (from {Path(td.file_path).name}) --", "", td.source_code, ""])
               lines.extend(["// -- Preview --", ""])
-              bm = re.search(r'\{', preview.source_code)
+              bm = re.search(r"\{", preview.source_code)
               if bm:
                   ib = extract_balanced(preview.source_code, bm.start())
                   if ib:
                       inner = ib[1:-1].strip()
                       lines.append("struct Preview: View {")
                       lines.append("    var body: some View {")
-                      for l in inner.split('\n'): lines.append(f"        {l}")
+                      for l in inner.split("\n"):
+                          lines.append(f"        {l}")
                       lines.extend(["    }", "}", ""])
-                  else: lines.append("// Parse error")
-              else: lines.append("// Parse error")
-              return '\n'.join(lines)
+                  else:
+                      lines.append("// Parse error")
+              else:
+                  lines.append("// Parse error")
+              return "\n".join(lines)
 
           def main():
               pp = sys.argv[1] if len(sys.argv) > 1 else os.getcwd()
-              pp = os.path.abspath(pp); op = os.path.join(pp, OUTPUT_DIR)
+              pp = os.path.abspath(pp)
+              op = os.path.join(pp, OUTPUT_DIR)
               print(f"Scan: {pp}\n")
-              sf = find_swift_files(pp); print(f"   {len(sf)} fichiers Swift")
-              all_t = {}; all_p = []
+              sf = find_swift_files(pp)
+              print(f"   {len(sf)} Swift files")
+              all_t = {}
+              all_p = []
               for fp in sf:
                   try:
-                      with open(fp, 'r', encoding='utf-8') as f: src = f.read()
-                  except: continue
+                      with open(fp, "r", encoding="utf-8") as f:
+                          src = f.read()
+                  except Exception:
+                      continue
                   for td in parse_types(fp, src):
-                      if td.name not in all_t: all_t[td.name] = td
+                      if td.name not in all_t:
+                          all_t[td.name] = td
                   all_p.extend(parse_previews(fp, src))
               names = sorted(all_t.keys())
-              print(f"   {len(all_t)} types ({', '.join(names[:8])}{'...' if len(names)>8 else ''})")
+              print(f"   {len(all_t)} types ({', '.join(names[:8])}{'...' if len(names) > 8 else ''})")
               print(f"   {len(all_p)} #Preview\n")
-              if not all_p: print("Aucun #Preview trouve."); sys.exit(0)
+              if not all_p:
+                  print("No #Preview found.")
+                  sys.exit(0)
               os.makedirs(op, exist_ok=True)
               for prev in all_p:
                   sft = [td for td in all_t.values() if td.file_path == prev.file_path]
@@ -195,15 +317,17 @@ jobs:
                   if len(same_name) > 1:
                       idx = same_name.index(prev) + 1
                       oname = f"{prev.file_name}_Preview{idx}.swift"
-                  else: oname = f"{prev.file_name}.swift"
-                  with open(os.path.join(op, oname), 'w') as f: f.write(content)
+                  else:
+                      oname = f"{prev.file_name}.swift"
+                  with open(os.path.join(op, oname), "w", encoding="utf-8") as f:
+                      f.write(content)
                   print(f"   {oname} <- {Path(prev.file_path).name}")
-                  if prev.parent_view: print(f"      Vue: {prev.parent_view}")
-              print(f"\n{len(all_p)} fichier(s) genere(s) dans {OUTPUT_DIR}/")
+              print(f"\n{len(all_p)} file(s) generated in {OUTPUT_DIR}/")
 
-          if __name__ == "__main__": main()
+          if __name__ == "__main__":
+              main()
           PYSCRIPT
-          python3 /tmp/generate_previews.py .
+          PYTHONIOENCODING=UTF-8 python3 /tmp/generate_previews.py .
 
       - name: List generated previews
         run: ls -la PreviewRenders/ || echo "Aucun fichier genere"
@@ -217,20 +341,34 @@ jobs:
       - name: Render all previews
         run: |
           mkdir -p rendered/light rendered/dark
+          failures=0
+          : > rendered/render-errors.txt
           for f in PreviewRenders/*.swift; do
             [ -f "$f" ] || continue
             base="$(basename "$f" .swift)"
             echo ""
             echo "Rendering $base..."
             swiftui-render render "$f" --iphone --device-frame \
-              -o "rendered/light/${base}.png" \
-              || echo "Echec light: $base"
+              -o "rendered/light/${base}.png"
+            if [ $? -ne 0 ]; then
+              echo "Echec light: $base" | tee -a rendered/render-errors.txt
+              failures=1
+            fi
             swiftui-render render "$f" --iphone --device-frame --dark \
-              -o "rendered/dark/${base}.png" \
-              || echo "Echec dark: $base"
+              -o "rendered/dark/${base}.png"
+            if [ $? -ne 0 ]; then
+              echo "Echec dark: $base" | tee -a rendered/render-errors.txt
+              failures=1
+            fi
           done
           echo ""
           find rendered -name "*.png" | sort
+          if [ $failures -ne 0 ]; then
+            echo ""
+            echo "Previews en erreur:"
+            cat rendered/render-errors.txt
+            exit 1
+          fi
 
       - name: Generate preview gallery
         run: |
@@ -341,3 +479,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+

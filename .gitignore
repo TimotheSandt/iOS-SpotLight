@@ -40,3 +40,6 @@ fastlane/test_output/
 # Editors / tooling
 .idea/
 .vscode/
+
+PreviewRenders/
+generating_preview.py
