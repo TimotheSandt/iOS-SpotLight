@@ -1,0 +1,58 @@
+name: SwiftUI Preview Renders
+
+# Quand est-ce que ça se déclenche ?
+on:
+  # À chaque push qui modifie un fichier dans PreviewRenders/
+  push:
+    paths:
+      - "PreviewRenders/**/*.swift"
+  # Permet aussi de déclencher manuellement depuis GitHub
+  workflow_dispatch:
+
+jobs:
+  render:
+    runs-on: macos-15    # Runner macOS gratuit (repos publics)
+
+    steps:
+      # 1. Récupérer le code du repo
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Installer swiftui-render via Homebrew
+      - name: Install swiftui-render
+        run: |
+          brew tap olliewagner/swiftui-render
+          brew install swiftui-render
+
+      # 3. Render tous les fichiers Swift dans PreviewRenders/
+      - name: Render all preview files
+        run: |
+          mkdir -p rendered/light rendered/dark
+
+          for f in PreviewRenders/*.swift; do
+            [ -f "$f" ] || continue
+            base="$(basename "$f" .swift)"
+
+            echo "🎨 Rendering $base (light + dark)..."
+
+            # Rendu light mode - iPhone 15
+            swiftui-render render "$f" \
+              --iphone \
+              --device-frame \
+              -o "rendered/light/${base}.png"
+
+            # Rendu dark mode - iPhone 15
+            swiftui-render render "$f" \
+              --iphone \
+              --device-frame \
+              --dark \
+              -o "rendered/dark/${base}.png"
+          done
+
+      # 4. Uploader les images comme artifacts téléchargeables
+      - name: Upload rendered previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: swiftui-previews
+          path: rendered/
+          retention-days: 30
