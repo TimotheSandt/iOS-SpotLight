@@ -6,6 +6,12 @@ on:
       - "**/*.swift"
   workflow_dispatch:
 
+# Permissions nécessaires pour GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   render:
     runs-on: macos-15
@@ -14,7 +20,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Le script Python est généré directement ici — pas besoin de fichier séparé
       - name: Generate self-contained preview files
         run: |
           cat << 'PYSCRIPT' > /tmp/generate_previews.py
@@ -216,10 +221,10 @@ jobs:
             base="$(basename "$f" .swift)"
             echo ""
             echo "Rendering $base..."
-            swiftui-render render "$f" --iphone --device-frame \
+            swiftui-render render "$f" --iphone --device-frame --backend catalyst \
               -o "rendered/light/${base}.png" \
               || echo "Echec light: $base"
-            swiftui-render render "$f" --iphone --device-frame --dark \
+            swiftui-render render "$f" --iphone --device-frame --backend catalyst --dark \
               -o "rendered/dark/${base}.png" \
               || echo "Echec dark: $base"
           done
@@ -228,29 +233,50 @@ jobs:
 
       - name: Generate preview gallery
         run: |
-          cat > rendered/index.html << 'HTMLEOF'
+          COMMIT_SHA="${GITHUB_SHA::7}"
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          TIMESTAMP=$(date -u +"%d/%m/%Y %H:%M UTC")
+
+          cat > rendered/index.html << HTMLEOF
           <!DOCTYPE html>
           <html lang="fr">
           <head>
             <meta charset="UTF-8">
-            <title>SwiftUI Previews</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>SwiftUI Previews — ${GITHUB_REPOSITORY}</title>
             <style>
-              body{font-family:-apple-system,system-ui,sans-serif;background:#1a1a2e;color:#fff;padding:40px}
-              h1{text-align:center;margin-bottom:40px}
-              .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:30px;max-width:1400px;margin:0 auto}
-              .card{background:#16213e;border-radius:16px;padding:20px}
-              .card h2{font-size:16px;margin:0 0 16px;color:#a8b2d1}
-              .modes{display:flex;gap:16px}
+              *{box-sizing:border-box}
+              body{font-family:-apple-system,system-ui,sans-serif;background:#0d1117;color:#e6edf3;padding:20px 40px;margin:0}
+              h1{text-align:center;margin-bottom:8px;font-size:28px}
+              .meta{text-align:center;color:#8b949e;font-size:13px;margin-bottom:40px}
+              .meta code{background:#161b22;padding:2px 8px;border-radius:4px;color:#58a6ff;font-size:12px}
+              .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:24px;max-width:1400px;margin:0 auto}
+              .card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:20px;transition:border-color .2s}
+              .card:hover{border-color:#58a6ff}
+              .card h2{font-size:15px;margin:0 0 16px;color:#c9d1d9;font-weight:600}
+              .card h2 span{color:#8b949e;font-weight:400;font-size:12px}
+              .modes{display:flex;gap:12px}
               .mode{flex:1;text-align:center}
-              .mode img{max-width:100%;border-radius:12px;border:1px solid #2a2a4a}
-              .mode p{font-size:12px;color:#666;margin-top:8px}
-              .meta{margin-top:30px;text-align:center;font-size:12px;color:#444}
+              .mode img{max-width:100%;border-radius:8px;border:1px solid #30363d;cursor:pointer;transition:transform .2s}
+              .mode img:hover{transform:scale(1.02)}
+              .mode p{font-size:11px;color:#8b949e;margin-top:6px}
+              .footer{margin-top:40px;text-align:center;font-size:11px;color:#484f58}
+              .footer a{color:#58a6ff;text-decoration:none}
+              /* Lightbox */
+              .lightbox{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.9);z-index:100;justify-content:center;align-items:center;cursor:zoom-out}
+              .lightbox.active{display:flex}
+              .lightbox img{max-width:90%;max-height:90%;border-radius:12px}
             </style>
           </head>
           <body>
             <h1>SwiftUI Previews</h1>
+            <p class="meta">
+              Commit <code>${COMMIT_SHA}</code> — ${COMMIT_MSG}<br>
+              ${TIMESTAMP}
+            </p>
             <div class="grid">
           HTMLEOF
+
           for f in rendered/light/*.png; do
             [ -f "$f" ] || continue
             base="$(basename "$f" .png)"
@@ -258,21 +284,59 @@ jobs:
               <div class="card">
                 <h2>${base}</h2>
                 <div class="modes">
-                  <div class="mode"><img src="light/${base}.png" alt="${base} light"><p>Light</p></div>
-                  <div class="mode"><img src="dark/${base}.png" alt="${base} dark"><p>Dark</p></div>
+                  <div class="mode">
+                    <img src="light/${base}.png" alt="${base} light" onclick="openLightbox(this)">
+                    <p>Light</p>
+                  </div>
+                  <div class="mode">
+                    <img src="dark/${base}.png" alt="${base} dark" onclick="openLightbox(this)">
+                    <p>Dark</p>
+                  </div>
                 </div>
               </div>
           CARDEOF
           done
+
           cat >> rendered/index.html << 'HTMLEOF'
             </div>
-            <p class="meta">Genere automatiquement par GitHub Actions</p>
+            <p class="footer">
+              Auto-generated by <a href="https://github.com/olliewagner/swiftui-render">swiftui-render</a>
+              via GitHub Actions
+            </p>
+            <div class="lightbox" id="lb" onclick="this.classList.remove('active')">
+              <img id="lb-img" src="">
+            </div>
+            <script>
+              function openLightbox(el) {
+                document.getElementById('lb-img').src = el.src;
+                document.getElementById('lb').classList.add('active');
+              }
+            </script>
           </body></html>
           HTMLEOF
 
-      - name: Upload rendered previews
-        uses: actions/upload-artifact@v4
+      # Déployer sur GitHub Pages
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload to Pages
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: swiftui-previews
           path: rendered/
-          retention-days: 30
+
+  deploy:
+    needs: render
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
