@@ -13,6 +13,7 @@ protocol Media: Identifiable, Codable {
     var id: UUID { get }
     var title: String { get set }
     var creator: String { get set }
+    var pays: String { get set }
     var description: String { get set }
     var releaseDate: Date { get set }
     var platforms: [Platform] { get set }
@@ -25,6 +26,7 @@ struct Film: Media {
     var id = UUID()
     var title: String
     var creator: String
+    var pays: String
     var description: String
     var releaseDate: Date
     var platforms: [Platform]
@@ -58,6 +60,7 @@ struct Serie: Media {
     var id = UUID()
     var title: String
     var creator: String
+    var pays: String
     var description: String
     var releaseDate: Date
     var platforms: [Platform]

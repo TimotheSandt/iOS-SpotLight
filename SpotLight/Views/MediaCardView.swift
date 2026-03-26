@@ -68,7 +68,7 @@ struct MediaCardView: View {
             .frame(height: 180)
             
             // Genres
-            HStack {
+            FlowLayout(spacing: 8) {
                 ForEach (media.genres, id: \.self) { genre in
                     Text(genre.rawValue)
                         .font(.caption2)

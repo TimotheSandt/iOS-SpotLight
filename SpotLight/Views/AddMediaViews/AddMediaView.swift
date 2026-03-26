@@ -67,7 +67,11 @@ struct AddMediaView: View {
                     
                     // Bouton de sauvegarde
                     Button {
-                        
+                        if mediaType == .film {
+                            data.addFilm(title: title, creator: realisateur, annee: Int(annee) ?? 0, duration: Int(duree) ?? 0, releaseDate: date, pays: pays, platform: platform, genres: selectedGenres)
+                        } else {
+                            data.addSerie(title: title, creator: realisateur, annee: Int(annee) ?? 0, duration: Int(duree) ?? 0, releaseDate: date, pays: pays, platform: platform, genres: selectedGenres, seasons: [])
+                        }
                         dismiss()
                     } label: {
                         Text("Save")
