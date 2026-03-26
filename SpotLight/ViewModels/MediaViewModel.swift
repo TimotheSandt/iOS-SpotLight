@@ -21,12 +21,30 @@ class MediaViewModel {
     
     
     func addFilm(title: String, creator: String, annee: Int, duration: Int, releaseDate: Date , pays: String, platform: Platform, genres: [Genre]) {
-        let newFilm = Film(title: title, creator: creator, releaseDate: releaseDate, platforms: [platform], genres: genres, duration: duration, pays: pays, description: "Aucune description")
+        let newFilm = Film(
+            title: title,
+            creator: creator,
+            pays: pays,
+            description: "Aucune description",
+            releaseDate: releaseDate,
+            platforms: [platform],
+            genres: genres,
+            duration: duration
+        )
         self.media.append(newFilm)
     }
     
     func addSerie(title: String, creator: String, annee: Int, duration: Int, releaseDate: Date, pays: String, platform: Platform, genres: [Genre], seasons: [Season]) {
-        let newSerie = Serie(title: title, creator: creator, releaseDate: releaseDate, platforms: [platform], genres: genres, description: "Aucune description", pays: pays, duration: duration, seasons: seasons)
+        let newSerie = Serie(
+            title: title,
+            creator: creator,
+            pays: pays,
+            description: "Aucune description",
+            releaseDate: releaseDate,
+            platforms: [platform],
+            genres: genres,
+            seasons: seasons
+        )
         self.media.append(newSerie)
     }
 

@@ -38,8 +38,8 @@ struct Film: Media {
     
     
     static let testData: [Film] = [
-        Film(title: "Star Wars: Episode IV - A New Hope", creator: "George Lucas", description: "A new hope for the galaxy.", releaseDate: Date(), platforms: [.disneyPlus], genres: [.action, .fantasy], duration: 135),
-        Film(title: "Star Wars: Episode V - The Empire Strikes Back", creator: "George Lucas", description: "The Empire Strikes Back.", releaseDate: Date(), platforms: [.disneyPlus], genres: [.action, .fantasy], duration: 142)
+        Film(title: "Star Wars: Episode IV - A New Hope", creator: "George Lucas", pays: "USA", description: "A new hope for the galaxy.", releaseDate: Date(), platforms: [.disneyPlus], genres: [.action, .fantasy], duration: 135),
+        Film(title: "Star Wars: Episode V - The Empire Strikes Back", creator: "George Lucas", pays: "USA", description: "The Empire Strikes Back.", releaseDate: Date(), platforms: [.disneyPlus], genres: [.action, .fantasy], duration: 142)
     ]
         
 }
@@ -81,6 +81,6 @@ struct Serie: Media {
     
     
     static let testData: [Serie] = [
-        Serie(title: "Stranger Things", creator: "Duffer Brother", description: "demogogon", releaseDate: Date(), platforms: [.netflix], genres: [.action, .fantasy, .horror], seasons: [Season(number: 1, releaseDate: Date(), episodeCount: 9, averageDuration: 45)])
+        Serie(title: "Stranger Things", creator: "Duffer Brother", pays: "USA", description: "demogogon", releaseDate: Date(), platforms: [.netflix], genres: [.action, .fantasy, .horror], seasons: [Season(number: 1, releaseDate: Date(), episodeCount: 9, averageDuration: 45)])
     ]
 }
