@@ -22,17 +22,15 @@ struct AddSectionSuiviView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             Picker("Select status", selection: $status) {
-                Text(Status.wishlist.rawValue).tag(Status.wishlist)
-                Text(Status.watched.rawValue).tag(Status.watched)
+                ForEach(Status.allCases.filter { $0 != .all }, id: \.self) { status in
+                    Text(status.rawValue).tag(status)
+                }
             }
             .pickerStyle(.segmented)
             
             
             if (status != .wishlist) {
-                TextField("Note /5", text: $note)  // TODO: transformer en systeme d'étoile
-                    .padding(.horizontal)
-                    .frame(height: 35)
-                    .overlay(Capsule().stroke(Color.gray.opacity(0.3), lineWidth: 1))
+                StarRatingView(rating: $note)
                 
                 HStack {
                     Image(systemName: "calendar")

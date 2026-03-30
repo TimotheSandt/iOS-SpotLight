@@ -72,9 +72,9 @@ struct AddMediaView: View {
                         let c: String? = (status == .wishlist) ? nil : commentaire
                         
                         if mediaType == .film {
-                            data.addFilm(title: title, creator: realisateur, annee: Int(annee) ?? 0, duration: Int(duree) ?? 0, releaseDate: date, pays: pays, platform: platform, genres: selectedGenres, status: status, note: n, comment: c, date: d)
+                            data.addFilm(title: title, creator: realisateur, annee: Int(annee) ?? 0, duration: Int(duree) ?? 0, releaseYear: Int(annee) ?? 0, pays: pays, platform: platform, genres: selectedGenres, status: status, note: n, comment: c, date: d)
                         } else {
-                            data.addSerie(title: title, creator: realisateur, annee: Int(annee) ?? 0, duration: Int(duree) ?? 0, releaseDate: date, pays: pays, platform: platform, genres: selectedGenres, seasons: [], status: status, note: n, comment: c, date: d)
+                            data.addSerie(title: title, creator: realisateur, annee: Int(annee) ?? 0, duration: Int(duree) ?? 0, releaseYear: Int(annee) ?? 0, pays: pays, platform: platform, genres: selectedGenres, seasons: [], status: status, note: n, comment: c, date: d)
                         }
                         dismiss()
                     } label: {

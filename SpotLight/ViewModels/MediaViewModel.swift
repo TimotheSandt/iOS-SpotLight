@@ -24,7 +24,7 @@ class MediaViewModel {
         self.media.append(media)
     }
     
-    func addFilm(title: String, creator: String, annee: Int, duration: Int, releaseDate: Date , pays: String, platform: Platform, genres: [Genre], status: Status, note: Double?, comment: String?, date: Date?) {
+    func addFilm(title: String, creator: String, annee: Int, duration: Int, releaseYear: Int , pays: String, platform: Platform, genres: [Genre], status: Status, note: Double?, comment: String?, date: Date?) {
         var watchHistory: [WatchSession] = []
         if (date != nil) {
             watchHistory.append(WatchSession(date: date!, status: .watched))
@@ -43,7 +43,7 @@ class MediaViewModel {
             creator: creator,
             pays: pays,
             description: "Aucune description",
-            releaseDate: releaseDate,
+            releaseYear: releaseYear,
             platforms: [platform],
             genres: genres,
             duration: duration,
@@ -52,7 +52,7 @@ class MediaViewModel {
         self.media.append(newFilm)
     }
     
-    func addSerie(title: String, creator: String, annee: Int, duration: Int, releaseDate: Date, pays: String, platform: Platform, genres: [Genre], seasons: [Season], status: Status, note: Double?, comment: String?, date: Date?) {
+    func addSerie(title: String, creator: String, annee: Int, duration: Int, releaseYear: Int, pays: String, platform: Platform, genres: [Genre], seasons: [Season], status: Status, note: Double?, comment: String?, date: Date?) {
         var watchHistory: [WatchSession] = []
         if (date != nil) {
             watchHistory.append(WatchSession(date: date!, status: .watched))
@@ -70,7 +70,7 @@ class MediaViewModel {
             creator: creator,
             pays: pays,
             description: "Aucune description",
-            releaseDate: releaseDate,
+            releaseYear: releaseYear,
             platforms: [platform],
             genres: genres,
             seasons: seasons,

@@ -40,14 +40,10 @@ struct MediaCardView: View {
                         .foregroundStyle(.white)
                         .lineLimit(1)
                     
-                    Text(media.creator)
+                    Text("\(media.creator) - \(media.releaseYear)")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.8))
                         .lineLimit(1)
-                    
-                    Text(media.releaseDate, style: .date)
-                        .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.6))
                 }
                 .padding(.horizontal, 12)
                 .padding(.bottom, 12)
@@ -64,6 +60,28 @@ struct MediaCardView: View {
                     .background(.ultraThinMaterial)
                     .clipShape(Capsule())
                     .padding(8)
+            }
+            .frame(height: 180)
+            .overlay(alignment: .topTrailing) {
+                // Statut et Date à droite
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(media.interaction.status.rawValue).font(.caption2)
+                        .bold()
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Capsule())
+                    if let lastDate = media.interaction.lastWatchedDate {
+                        Text(lastDate.formatted(.dateTime.day().month().year()))
+                            .font(.system(size: 10, weight: .bold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Capsule())
+                    }
+                }
+                .padding(8)
             }
             .frame(height: 180)
             

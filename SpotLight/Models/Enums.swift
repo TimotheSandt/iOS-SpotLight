@@ -12,6 +12,15 @@ enum MediaType: String, CaseIterable, Codable {
     case serie = "Serie"
 }
 
+enum Status: String, CaseIterable, Codable {
+    case all = "Tous"
+    case wishlist = "Wishlist"
+    case watching = "En cours"
+    case watched = "Vu"
+    case abandoned = "Abandonné"
+}
+
+
 enum Genre: String, CaseIterable, Codable {
     case scifi = "Science Fiction"
     case fantasy = "Fantasy"
@@ -28,12 +37,4 @@ enum Platform: String, CaseIterable, Codable {
     case disneyPlus = "Disney+"
     case canalPlus = "Canal+"
     case appleTV = "Apple TV+"
-}
-
-enum Status: String, CaseIterable, Codable {
-    case all = "Tous"
-    case wishlist = "Wishlist"
-    case watching = "En cours"
-    case watched = "Vu"
-    case abandoned = "Abandonné"
 }
