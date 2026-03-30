@@ -5,8 +5,9 @@
 //  Created by sandt timothe on 30/03/2026.
 //
 
+import Foundation
 
-private enum StatsPeriod: String, CaseIterable, Identifiable {
+enum StatsPeriod: String, CaseIterable, Identifiable {
     case week = "Semaine"
     case month = "Mois"
     case year = "Annee"
@@ -15,7 +16,7 @@ private enum StatsPeriod: String, CaseIterable, Identifiable {
     var id: Self { self }
 }
 
-private struct StatsRange {
+struct StatsRange {
     let start: Date
     let end: Date
 
@@ -24,7 +25,7 @@ private struct StatsRange {
     }
 }
 
-private struct GlobalStatsSummary {
+struct GlobalStatsSummary {
     let watchedMediaCount: Int
     let totalSessionsCount: Int
     let totalDuration: Int
@@ -32,4 +33,14 @@ private struct GlobalStatsSummary {
     let reviewCount: Int
     let filmCount: Int
     let serieCount: Int
+
+    static let empty = GlobalStatsSummary(
+        watchedMediaCount: 0,
+        totalSessionsCount: 0,
+        totalDuration: 0,
+        averageRating: nil,
+        reviewCount: 0,
+        filmCount: 0,
+        serieCount: 0
+    )
 }
