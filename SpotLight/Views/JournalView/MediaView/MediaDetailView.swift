@@ -9,23 +9,30 @@ import SwiftUI
 
 struct MediaDetailView: View {
     
-    @State var media: any Media
+    @Environment(MediaViewModel.self) private var data
+    let mediaID: UUID
     @State private var showAddInteraction = false
     @State private var newStatus: Status = .watched
     @State private var newDate: Date = Date()
+
+    private var media: (any Media)? {
+        data.media(withID: mediaID)
+    }
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                SimplifyMediaCardView(media: media)
-
-                // AVIS
-                MediaDetailAvisView(media: media)
-                
-                // HISTORIQUE
-                MediaDetailHistoriqueView(media: media, showAddInteraction: $showAddInteraction)
+        Group {
+            if let media {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        SimplifyMediaCardView(media: media)
+                        MediaDetailAvisView(mediaID: mediaID)
+                        MediaDetailHistoriqueView(media: media, showAddInteraction: $showAddInteraction)
+                    }
+                    .padding(.vertical)
+                }
+            } else {
+                ContentUnavailableView("Media introuvable", systemImage: "exclamationmark.triangle")
             }
-            .padding(.vertical)
         }
         .navigationTitle("Détails")
         .navigationBarTitleDisplayMode(.inline)
@@ -53,9 +60,7 @@ struct MediaDetailView: View {
                 .cornerRadius(15)
 
                 Button {
-                    let session = WatchSession(date: newDate, status: newStatus)
-                    media.interaction.watchHistory.append(session)
-                    media.interaction.status = newStatus
+                    data.addWatchSession(for: mediaID, status: newStatus, date: newDate)
                     showAddInteraction = false
                 } label: {
                     Text("Confirmer")
@@ -76,13 +81,16 @@ struct MediaDetailView: View {
 
 
 #Preview("Avec Avis (Inception)") {
-    MediaDetailView(media: Film.testData[0])
+    MediaDetailView(mediaID: Film.testData[0].id)
+        .environment(MediaViewModel())
 }
 
 #Preview("Sans Avis (The Bear)") {
-    MediaDetailView(media: Serie.testData[0])
+    MediaDetailView(mediaID: Serie.testData[0].id)
+        .environment(MediaViewModel())
 }
 
 #Preview("Wishlist (Dune)") {
-    MediaDetailView(media: Film.testData[1])
+    MediaDetailView(mediaID: Film.testData[1].id)
+        .environment(MediaViewModel())
 }

@@ -55,7 +55,7 @@ struct JournalView: View {
                             if (isStatusCorrect(selectedStatus, for: item)) {
                                 // Rendre la carte cliquable
                                 NavigationLink {
-                                    MediaDetailView(media: item)
+                                    MediaDetailView(mediaID: item.id)
                                 } label: {
                                     MediaCardView(media: item)
                                         .contentShape(Rectangle()) // Améliore la zone de clic

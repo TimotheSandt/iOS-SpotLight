@@ -7,67 +7,75 @@
 
 import SwiftUI
 
-import SwiftUI
-
 struct MediaDetailAvisView: View {
-    @State var media: any Media
+    @Environment(MediaViewModel.self) private var data
+    let mediaID: UUID
     @State private var isEditing: Bool = false
     
     // États temporaires pour l'édition
     @State private var tempNote: String = ""
     @State private var tempComment: String = ""
     
+    private var media: (any Media)? {
+        data.media(withID: mediaID)
+    }
+
     var hasAvis: Bool {
-        media.interaction.note != nil || (media.interaction.comment != nil && !media.interaction.comment!.isEmpty)
+        guard let media else { return false }
+        return media.interaction.note != nil || (media.interaction.comment != nil && !media.interaction.comment!.isEmpty)
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Ton avis")
-                    .font(.headline)
-                Spacer()
-                
-                // Bouton Edit (visible si pas en wishlist)
-                if media.interaction.status != .wishlist {
-                    Button(hasAvis ? "Modifier" : "Ajouter") {
-                        tempNote = media.interaction.note != nil ? String(Int(media.interaction.note!)) : "0"
-                        tempComment = media.interaction.comment ?? ""
-                        isEditing = true
-                    }
-                    .font(.subheadline)
-                }
-            }
-            
-            if hasAvis {
-                VStack(alignment: .leading, spacing: 10) {
-                    // Affichage de la note si elle existe
-                    if let note = media.interaction.note {
-                        HStack(spacing: 4) {
-                            ForEach(1...5, id: \.self) { index in
-                                Image(systemName: index <= Int(note) ? "star.fill" : "star")
-                                    .foregroundStyle(index <= Int(note) ? .yellow : .gray.opacity(0.3))
-                                    .font(.caption)
+        Group {
+            if let media {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Ton avis")
+                            .font(.headline)
+                        Spacer()
+                        
+                        // Bouton Edit (visible si pas en wishlist)
+                        if media.interaction.status != .wishlist {
+                            Button(hasAvis ? "Modifier" : "Ajouter") {
+                                tempNote = media.interaction.note != nil ? String(Int(media.interaction.note!)) : "0"
+                                tempComment = media.interaction.comment ?? ""
+                                isEditing = true
                             }
-                            Text("\(Int(note))/5").font(.caption).bold()
+                            .font(.subheadline)
                         }
                     }
-                    
-                    // Affichage du commentaire s'il existe
-                    if let comment = media.interaction.comment, !comment.isEmpty {
-                        Text(comment)
-                            .font(.callout)
-                            .padding()
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(.gray.opacity(0.05))
-                            .cornerRadius(12)
+
+                    if hasAvis {
+                        VStack(alignment: .leading, spacing: 10) {
+                            // Affichage de la note si elle existe
+                            if let note = media.interaction.note {
+                                HStack(spacing: 4) {
+                                    ForEach(1...5, id: \.self) { index in
+                                        Image(systemName: index <= Int(note) ? "star.fill" : "star")
+                                            .foregroundStyle(index <= Int(note) ? .yellow : .gray.opacity(0.3))
+                                            .font(.caption)
+                                    }
+                                    Text("\(Int(note))/5").font(.caption).bold()
+                                }
+                            }
+                            
+                            // Affichage du commentaire s'il existe
+                            if let comment = media.interaction.comment, !comment.isEmpty {
+                                Text(comment)
+                                    .font(.callout)
+                                    .padding()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(.gray.opacity(0.05))
+                                    .cornerRadius(12)
+                            }
+                        }
+                    } else {
+                        Text(media.interaction.status == .wishlist ? "Indisponible en Wishlist" : "Aucun avis pour le moment")
+                            .font(.caption)
+                            .italic()
+                            .foregroundStyle(.secondary)
                     }
                 }
-            } else {
-                Text(media.interaction.status == .wishlist ? "Indisponible en Wishlist" : "Aucun avis pour le moment")
-                    .font(.caption)
-                    .italic()
-                    .foregroundStyle(.secondary)
             }
         }
         .padding(.horizontal)
@@ -100,8 +108,7 @@ struct MediaDetailAvisView: View {
                     }
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Enregistrer") {
-                            media.interaction.note = Double(tempNote)
-                            media.interaction.comment = tempComment
+                            data.updateAvis(for: mediaID, note: Double(tempNote), comment: tempComment)
                             isEditing = false
                         }
                         .bold()
@@ -116,13 +123,16 @@ struct MediaDetailAvisView: View {
 
 
 #Preview("Avec Avis (Inception)") {
-    MediaDetailAvisView(media: Film.testData[0])
+    MediaDetailAvisView(mediaID: Film.testData[0].id)
+        .environment(MediaViewModel())
 }
 
 #Preview("Sans Avis (The Bear)") {
-    MediaDetailAvisView(media: Serie.testData[0])
+    MediaDetailAvisView(mediaID: Serie.testData[0].id)
+        .environment(MediaViewModel())
 }
 
 #Preview("Wishlist (Dune)") {
-    MediaDetailAvisView(media: Film.testData[1])
+    MediaDetailAvisView(mediaID: Film.testData[1].id)
+        .environment(MediaViewModel())
 }

@@ -23,6 +23,10 @@ class MediaViewModel {
     func addMedia(_ media: any Media) {
         self.media.append(media)
     }
+
+    func media(withID id: UUID) -> (any Media)? {
+        media.first { $0.id == id }
+    }
     
     func addFilm(title: String, creator: String, annee: Int, duration: Int, releaseYear: Int , pays: String, platform: Platform, genres: [Genre], status: Status, note: Double?, comment: String?, date: Date?) {
         var watchHistory: [WatchSession] = []
@@ -82,5 +86,29 @@ class MediaViewModel {
     
     func deleteMedia(indexSet: IndexSet) {
         self.media.remove(atOffsets: indexSet)
+    }
+
+    func updateAvis(for id: UUID, note: Double?, comment: String?) {
+        updateMedia(withID: id) { media in
+            media.interaction.note = note
+            media.interaction.comment = comment
+        }
+    }
+
+    func addWatchSession(for id: UUID, status: Status, date: Date) {
+        updateMedia(withID: id) { media in
+            media.interaction.watchHistory.append(WatchSession(date: date, status: status))
+            media.interaction.status = status
+        }
+    }
+
+    private func updateMedia(withID id: UUID, mutate: (inout any Media) -> Void) {
+        guard let index = media.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+
+        var item = media[index]
+        mutate(&item)
+        media[index] = item
     }
 }
