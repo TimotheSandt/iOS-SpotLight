@@ -33,6 +33,17 @@ struct SimplifyMediaCardView: View {
                 if (media.mediaType == .serie) {
                     
                 }
+                if let serie = media as? Serie {
+                    Text("\(serie.seasons.count) saison\(serie.seasons.count > 1 ? "s" : "")")
+                        .font(.caption2)
+                        .bold()
+                        .foregroundStyle(.primary)
+                } else if let film = media as? Film {
+                    Text(formatDuration(film.displayDuration))
+                        .font(.caption2)
+                        .bold()
+                        .foregroundStyle(.primary)
+                }
                 
                 Text(media.pays)
                     .font(.caption)

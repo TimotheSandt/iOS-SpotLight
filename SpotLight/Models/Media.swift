@@ -141,3 +141,15 @@ struct Serie: Media {
               seasons: [Season(number: 1, releaseDate: Date(), episodeCount: 9, averageDuration: 50)])
     ]
 }
+
+
+func formatDuration(_ duration: Int) -> String {
+    let hours = duration / 60
+    let minutes = duration.remainderReportingOverflow(dividingBy: 60).partialValue
+    
+    if hours == 0 {
+        return "\(minutes) min"
+    } else {
+        return "\(hours) h \(minutes) min"
+    }
+}

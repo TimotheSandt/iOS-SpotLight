@@ -19,13 +19,11 @@ struct MediaDetailView: View {
             VStack(alignment: .leading, spacing: 20) {
                 SimplifyMediaCardView(media: media)
 
-                if media.interaction.status != .wishlist {
-                    // AVIS
-                    MediaDetailAvisView(media: media)
-                    
-                    // HISTORIQUE
-                    MediaDetailHistoriqueView(media: media, showAddInteraction: $showAddInteraction)
-                }
+                // AVIS
+                MediaDetailAvisView(media: media)
+                
+                // HISTORIQUE
+                MediaDetailHistoriqueView(media: media, showAddInteraction: $showAddInteraction)
             }
             .padding(.vertical)
         }
@@ -77,21 +75,14 @@ struct MediaDetailView: View {
 }
 
 
-#Preview("Détail Film") {
-    NavigationStack {
-        MediaDetailView(media: Film.testData[0])
-    }
+#Preview("Avec Avis (Inception)") {
+    MediaDetailView(media: Film.testData[0])
 }
 
-#Preview("Détail Série (En cours)") {
-    let tempSerie = Serie.testData[0]
-    var interaction = MediaInteraction(status: .watching)
-    interaction.watchHistory = [WatchSession(date: Date(), status: .watching)]
-    
-    var serieWithHistory = tempSerie
-    serieWithHistory.interaction = interaction
-    
-    return NavigationStack {
-        MediaDetailView(media: serieWithHistory)
-    }
+#Preview("Sans Avis (The Bear)") {
+    MediaDetailView(media: Serie.testData[0])
+}
+
+#Preview("Wishlist (Dune)") {
+    MediaDetailView(media: Film.testData[1])
 }

@@ -115,11 +115,7 @@ struct MediaCardView: View {
                 
                 Spacer()
                 
-                // Durée
-                let duration_hour: Int = media.displayDuration / 60
-                let duration_minute: Int = media.displayDuration.remainderReportingOverflow(dividingBy: 60).partialValue
-                
-                Text("\(duration_hour)h \(duration_minute)min")
+                Text("\(formatDuration(media.displayDuration))")
                     .font(.caption2)
                     .bold()
                     .foregroundStyle(.primary)
