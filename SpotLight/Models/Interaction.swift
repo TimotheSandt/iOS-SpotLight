@@ -29,11 +29,30 @@ struct MediaInteraction: Identifiable, Codable {
     
     
     
-    
+    var isWishlisted: Bool {
+        status == .wishlist && watchHistory.isEmpty
+    }
     
     var isWatched: Bool {
-        !watchHistory.isEmpty || status == .watched
+        if !watchHistory.isEmpty {
+            for session in watchHistory {
+                if session.status == .watched {
+                    return true
+                }
+            }
+        }
+        return false
     }
+    
+    var isWatching: Bool {
+        !watchHistory.isEmpty && status == .watching
+    }
+    
+    var isAbandoned: Bool {
+        !isWishlisted && !isWatched && !isWatching
+    }
+    
+    
     
     var lastWatchedDate: Date? {
         watchHistory.map { $0.date }.max()

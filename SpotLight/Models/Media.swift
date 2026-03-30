@@ -20,6 +20,7 @@ protocol Media: Identifiable, Codable {
     var genres: [Genre] { get set }
     
     var displayDuration: Int { get }
+    var mediaType: MediaType { get }
     
     var interaction: MediaInteraction { get set }
 }
@@ -36,6 +37,8 @@ struct Film: Media {
     
     var duration: Int
     var displayDuration: Int { duration }
+    
+    var mediaType: MediaType { .film }
     
     var interaction: MediaInteraction = .init()
     
@@ -89,6 +92,8 @@ struct Serie: Media {
     var genres: [Genre]
     
     var seasons: [Season]
+    
+    var mediaType: MediaType { .serie }
     
     var interaction: MediaInteraction = .init()
     

@@ -18,6 +18,25 @@ struct JournalView: View {
         GridItem(.flexible(), spacing: 16)
     ]
     
+    func isStatusCorrect(_ status: Status, for item: any Media) -> Bool {
+        if status == .all {
+            return true
+        }
+        
+        switch status {
+            case .wishlist:
+                return item.interaction.isWishlisted
+            case .watched:
+                return item.interaction.isWatched
+            case .watching:
+                return item.interaction.isWatching
+            case .abandoned:
+                return item.interaction.isAbandoned
+            default:
+                return false
+        }
+    }
+    
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -33,8 +52,15 @@ struct JournalView: View {
                     
                     LazyVGrid(columns: columns, spacing: 20) {
                         ForEach(data.media, id: \.id) { item in
-                            if ((selectedStatus == Status.all) || (item.interaction.status == selectedStatus)) {
-                                MediaCardView(media: item)
+                            if (isStatusCorrect(selectedStatus, for: item)) {
+                                // Rendre la carte cliquable
+                                NavigationLink {
+                                    MediaDetailView(media: item)
+                                } label: {
+                                    MediaCardView(media: item)
+                                        .contentShape(Rectangle()) // Améliore la zone de clic
+                                }
+                                .buttonStyle(PlainButtonStyle()) // Évite que le texte devienne tout bleu
                             }
                         }
                     }
