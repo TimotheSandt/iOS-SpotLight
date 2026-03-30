@@ -310,6 +310,8 @@ jobs:
                       rf"<{re.escape(tn)}>",
                       rf"\b{re.escape(tn)}\s*\?",
                       rf"\bis\s+{re.escape(tn)}\b",
+                      rf"\bas\?\s+{re.escape(tn)}\b",
+                      rf"\bas!\s+{re.escape(tn)}\b",
                       rf"\bas\s+{re.escape(tn)}\b",
                       rf"\b{re.escape(tn)}\s*:",
                   ]
