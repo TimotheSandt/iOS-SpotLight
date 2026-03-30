@@ -789,6 +789,7 @@ jobs:
         run: |
           failures=0
           : > rendered/render-errors.txt
+          : > rendered/render-status.tsv
           while IFS= read -r base; do
             [ -n "$base" ] || continue
             f="PreviewRenders/${base}.swift"
@@ -796,16 +797,24 @@ jobs:
             echo ""
             echo "Rendering $base..."
             light_out="rendered/light/${base}.png"
+            rm -f "$light_out"
             swiftui-render render "$f" --iphone --device-frame -o "$light_out"
             if [ $? -ne 0 ] || [ ! -f "$light_out" ]; then
               echo "Echec light: $base" | tee -a rendered/render-errors.txt
+              printf '%s\t%s\t%s\n' "$base" "light" "failed" >> rendered/render-status.tsv
               failures=1
+            else
+              printf '%s\t%s\t%s\n' "$base" "light" "ok" >> rendered/render-status.tsv
             fi
             dark_out="rendered/dark/${base}.png"
+            rm -f "$dark_out"
             swiftui-render render "$f" --iphone --device-frame --dark -o "$dark_out"
             if [ $? -ne 0 ] || [ ! -f "$dark_out" ]; then
               echo "Echec dark: $base" | tee -a rendered/render-errors.txt
+              printf '%s\t%s\t%s\n' "$base" "dark" "failed" >> rendered/render-status.tsv
               failures=1
+            else
+              printf '%s\t%s\t%s\n' "$base" "dark" "ok" >> rendered/render-status.tsv
             fi
           done < .preview-cache/changed-previews.txt
           echo ""
@@ -818,15 +827,15 @@ jobs:
           fi
           if [ $failures -ne 0 ]; then
             echo ""
-            echo "Previews en erreur:"
+            echo "Previews en erreur detectes, publication maintenue:"
             cat rendered/render-errors.txt
-            exit 1
           fi
 
       - name: Skip render when no preview changed
         if: steps.impacted.outputs.changed_count == '0'
         run: |
           echo "Aucun preview impacte, reutilisation du cache rendered/"
+          touch rendered/render-errors.txt rendered/render-status.tsv
           find rendered -name "*.png" | sort || true
 
       - name: Generate preview gallery
@@ -836,6 +845,7 @@ jobs:
           COMMIT_URL="https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
           COMMIT_MSG=$(git log -1 --pretty=%s)
           TIMESTAMP=$(date -u +"%d/%m/%Y %H:%M UTC")
+          ERROR_COUNT=$(wc -l < rendered/render-errors.txt | tr -d ' ')
 
           cat > rendered/index.html << HTMLEOF
           <!DOCTYPE html>
@@ -852,6 +862,11 @@ jobs:
               .meta code{background:#161b22;padding:2px 8px;border-radius:4px;color:#58a6ff;font-size:12px}
               .meta a{color:#58a6ff;text-decoration:none}
               .meta a:hover{text-decoration:underline}
+              .status{max-width:1000px;margin:0 auto 24px;padding:14px 16px;border-radius:12px;border:1px solid #30363d;background:#161b22}
+              .status.error{border-color:#f85149;background:rgba(248,81,73,.08)}
+              .status.ok{border-color:#238636;background:rgba(35,134,54,.08)}
+              .status strong{display:block;margin-bottom:6px}
+              .status ul{margin:8px 0 0 18px;padding:0}
               .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:24px;max-width:1400px;margin:0 auto}
               .card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:20px;transition:border-color .2s}
               .card:hover{border-color:#58a6ff}
@@ -861,6 +876,7 @@ jobs:
               .mode{flex:1;text-align:center}
               .mode img{max-width:100%;border-radius:8px;border:1px solid #30363d;cursor:pointer;transition:transform .2s}
               .mode img:hover{transform:scale(1.02)}
+              .mode .missing{min-height:240px;border-radius:8px;border:1px dashed #f85149;background:rgba(248,81,73,.08);display:flex;align-items:center;justify-content:center;padding:16px;color:#f85149;font-size:13px;line-height:1.4}
               .mode p{font-size:11px;color:#8b949e;margin-top:6px}
               .footer{margin-top:40px;text-align:center;font-size:11px;color:#484f58}
               .footer a{color:#58a6ff;text-decoration:none}
@@ -879,27 +895,87 @@ jobs:
               ${COMMIT_MSG}<br>
               ${TIMESTAMP}
             </p>
+          HTMLEOF
+
+          if [ "${ERROR_COUNT}" -gt 0 ]; then
+            cat >> rendered/index.html << HTMLEOF
+            <div class="status error">
+              <strong>Certains rendus ont echoue pour ce commit.</strong>
+              <div>Les previews concernees sont listees ci-dessous.</div>
+              <ul>
+          HTMLEOF
+            while IFS= read -r err; do
+              [ -n "$err" ] || continue
+              printf '                <li>%s</li>\n' "$err" >> rendered/index.html
+            done < rendered/render-errors.txt
+            cat >> rendered/index.html << HTMLEOF
+              </ul>
+            </div>
+          HTMLEOF
+          else
+            cat >> rendered/index.html << HTMLEOF
+            <div class="status ok">
+              <strong>Tous les rendus ont reussi pour ce commit.</strong>
+            </div>
+          HTMLEOF
+          fi
+
+          cat >> rendered/index.html << HTMLEOF
             <div class="grid">
           HTMLEOF
 
-          for f in rendered/light/*.png; do
+          for f in PreviewRenders/*.swift; do
             [ -f "$f" ] || continue
-            base="$(basename "$f" .png)"
-            cat >> rendered/index.html << CARDEOF
+            base="$(basename "$f" .swift)"
+            light_path="rendered/light/${base}.png"
+            dark_path="rendered/dark/${base}.png"
+            light_failed=0
+            dark_failed=0
+            grep -Fq "$(printf '%s\t%s\t%s' "$base" "light" "failed")" rendered/render-status.tsv && light_failed=1 || true
+            grep -Fq "$(printf '%s\t%s\t%s' "$base" "dark" "failed")" rendered/render-status.tsv && dark_failed=1 || true
+            cat >> rendered/index.html << HTMLEOF
               <div class="card">
                 <h2>${base}</h2>
                 <div class="modes">
                   <div class="mode">
+          HTMLEOF
+            if [ -f "$light_path" ]; then
+              cat >> rendered/index.html << HTMLEOF
                     <img src="light/${base}.png" alt="${base} light" onclick="openLightbox(this)">
+              HTMLEOF
+            elif [ $light_failed -eq 1 ]; then
+              cat >> rendered/index.html << HTMLEOF
+                    <div class="missing">Rendu light echoue pour ce commit</div>
+              HTMLEOF
+            else
+              cat >> rendered/index.html << HTMLEOF
+                    <div class="missing">Image light indisponible</div>
+              HTMLEOF
+            fi
+            cat >> rendered/index.html << HTMLEOF
                     <p>Light</p>
                   </div>
                   <div class="mode">
+          HTMLEOF
+            if [ -f "$dark_path" ]; then
+              cat >> rendered/index.html << HTMLEOF
                     <img src="dark/${base}.png" alt="${base} dark" onclick="openLightbox(this)">
+              HTMLEOF
+            elif [ $dark_failed -eq 1 ]; then
+              cat >> rendered/index.html << HTMLEOF
+                    <div class="missing">Rendu dark echoue pour ce commit</div>
+              HTMLEOF
+            else
+              cat >> rendered/index.html << HTMLEOF
+                    <div class="missing">Image dark indisponible</div>
+              HTMLEOF
+            fi
+            cat >> rendered/index.html << HTMLEOF
                     <p>Dark</p>
                   </div>
                 </div>
               </div>
-          CARDEOF
+          HTMLEOF
           done
 
           cat >> rendered/index.html << 'HTMLEOF'
