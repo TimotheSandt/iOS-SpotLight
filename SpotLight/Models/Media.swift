@@ -20,6 +20,8 @@ protocol Media: Identifiable, Codable {
     var genres: [Genre] { get set }
     
     var displayDuration: Int { get }
+    
+    var interaction: MediaInteraction { get set }
 }
 
 struct Film: Media {
@@ -35,6 +37,7 @@ struct Film: Media {
     var duration: Int
     var displayDuration: Int { duration }
     
+    var interaction: MediaInteraction = .init()
     
     
     static let testData: [Film] = [
@@ -67,6 +70,8 @@ struct Serie: Media {
     var genres: [Genre]
     
     var seasons: [Season]
+    
+    var interaction: MediaInteraction = .init()
     
     
     var numberOfEpisodes: Int {

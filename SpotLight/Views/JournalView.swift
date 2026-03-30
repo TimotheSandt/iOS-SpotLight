@@ -33,7 +33,9 @@ struct JournalView: View {
                     
                     LazyVGrid(columns: columns, spacing: 20) {
                         ForEach(data.media, id: \.id) { item in
-                            MediaCardView(media: item)
+                            if ((selectedStatus == Status.all) || (item.interaction.status == selectedStatus)) {
+                                MediaCardView(media: item)
+                            }
                         }
                     }
                     .padding(.horizontal)

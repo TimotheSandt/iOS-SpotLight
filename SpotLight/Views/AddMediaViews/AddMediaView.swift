@@ -67,10 +67,14 @@ struct AddMediaView: View {
                     
                     // Bouton de sauvegarde
                     Button {
+                        let d: Date? = (status == .wishlist) ? nil : date
+                        let n: Double? = (status == .wishlist) ? nil : Double(note)
+                        let c: String? = (status == .wishlist) ? nil : commentaire
+                        
                         if mediaType == .film {
-                            data.addFilm(title: title, creator: realisateur, annee: Int(annee) ?? 0, duration: Int(duree) ?? 0, releaseDate: date, pays: pays, platform: platform, genres: selectedGenres)
+                            data.addFilm(title: title, creator: realisateur, annee: Int(annee) ?? 0, duration: Int(duree) ?? 0, releaseDate: date, pays: pays, platform: platform, genres: selectedGenres, status: status, note: n, comment: c, date: d)
                         } else {
-                            data.addSerie(title: title, creator: realisateur, annee: Int(annee) ?? 0, duration: Int(duree) ?? 0, releaseDate: date, pays: pays, platform: platform, genres: selectedGenres, seasons: [])
+                            data.addSerie(title: title, creator: realisateur, annee: Int(annee) ?? 0, duration: Int(duree) ?? 0, releaseDate: date, pays: pays, platform: platform, genres: selectedGenres, seasons: [], status: status, note: n, comment: c, date: d)
                         }
                         dismiss()
                     } label: {
