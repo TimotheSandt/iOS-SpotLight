@@ -14,7 +14,7 @@ struct GlobalView: View {
                 JournalView()
             }
             Tab("Statistiques", systemImage: "chart.bar") {
-                EmptyView()
+                StatisticsView()
             }
             Tab("Profil", systemImage: "person") {
                 EmptyView()
