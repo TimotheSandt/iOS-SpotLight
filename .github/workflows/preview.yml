@@ -264,6 +264,41 @@ jobs:
                       break
               return src
 
+          def remove_modifier_calls(src, patterns):
+              for pat in patterns:
+                  src = re.sub(pat, "", src, flags=re.MULTILINE)
+              return src
+
+          def remove_unused_private_functions(src):
+              func_pattern = re.compile(
+                  r'^[ \t]*(?:@\w+(?:\([^)]*\))?\s+)*private\s+func\s+(\w+)\s*\(',
+                  re.MULTILINE,
+              )
+
+              changed = True
+              while changed:
+                  changed = False
+                  for match in func_pattern.finditer(src):
+                      func_name = match.group(1)
+                      refs = len(re.findall(rf"\b{re.escape(func_name)}\s*\(", src))
+                      if refs > 1:
+                          continue
+
+                      brace_pos = src.find("{", match.end())
+                      if brace_pos == -1:
+                          continue
+
+                      block = extract_balanced(src, brace_pos)
+                      if not block:
+                          continue
+
+                      line_start = src.rfind("\n", 0, match.start()) + 1
+                      src = src[:line_start] + src[brace_pos + len(block):]
+                      changed = True
+                      break
+
+              return src
+
           def sanitize_swiftui_for_render(src):
               # Remove behavior-only modifiers that do not help the static render.
               src = remove_modifier_blocks(src, [
@@ -275,6 +310,25 @@ jobs:
                   r"\.confirmationDialog\s*\([^)]*\)\s*\{",
                   r"\.alert\s*\([^)]*\)\s*\{",
                   r"\.tabItem\s*\{",
+                  r"\.contextMenu(?:\s*\([^)]*\))?\s*\{",
+                  r"\.swipeActions(?:\s*\([^)]*\))?\s*\{",
+                  r"\.simultaneousGesture\s*\([^)]*\)\s*\{",
+                  r"\.highPriorityGesture\s*\([^)]*\)\s*\{",
+                  r"\.gesture\s*\([^)]*\)\s*\{",
+                  r"\.onTapGesture(?:\s*\([^)]*\))?\s*\{",
+                  r"\.onLongPressGesture(?:\s*\([^)]*\))?\s*\{",
+                  r"\.onAppear(?:\s*\([^)]*\))?\s*\{",
+                  r"\.task(?:\s*\([^)]*\))?\s*\{",
+              ])
+              src = remove_modifier_calls(src, [
+                  r"\.onAppear\s*\(\s*perform:\s*[A-Za-z_]\w*\s*\)",
+                  r"\.task\s*\(\s*[A-Za-z_]\w*\s*\)",
+                  r"\.task\s*\(\s*priority:\s*\.\w+\s*,\s*[A-Za-z_]\w*\s*\)",
+                  r"\.onTapGesture\s*\(\s*count:\s*\d+\s*,\s*perform:\s*[A-Za-z_]\w*\s*\)",
+                  r"\.onLongPressGesture\s*\(\s*minimumDuration:\s*[^,()]+\s*,\s*perform:\s*[A-Za-z_]\w*\s*\)",
+                  r"\.simultaneousGesture\s*\([^)]*\)",
+                  r"\.highPriorityGesture\s*\([^)]*\)",
+                  r"\.gesture\s*\([^)]*\)",
               ])
 
               # Replace platform-specific or deprecated navigation APIs with render-safe versions.
@@ -305,6 +359,7 @@ jobs:
 
               # Clean up a few toolbar placements that may survive in extracted code.
               src = src.replace(".topBarTrailing", ".automatic")
+              src = remove_unused_private_functions(src)
               return src
 
           def generate(preview, all_t, same_file):
