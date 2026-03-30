@@ -59,6 +59,13 @@ jobs:
               parent_view: str | None
               imports: list = field(default_factory=list)
 
+          @dataclass
+          class FunctionDef:
+              name: str
+              file_path: str
+              source_code: str
+              start_line: int
+
           def find_swift_files(path):
               files = []
               for root, dirs, fnames in os.walk(path):
@@ -131,6 +138,65 @@ jobs:
                   i += 1
               return None
 
+          def is_top_level_position(text, pos):
+              depth = 0
+              i = 0
+              in_str = False
+              in_lc = False
+              in_bc = False
+              esc = False
+              while i < len(text) and i < pos:
+                  ch = text[i]
+                  if esc:
+                      esc = False
+                      i += 1
+                      continue
+                  if in_lc:
+                      if ch == "\n":
+                          in_lc = False
+                      i += 1
+                      continue
+                  if in_bc:
+                      if ch == "*" and i + 1 < len(text) and text[i + 1] == "/":
+                          in_bc = False
+                          i += 2
+                          continue
+                      i += 1
+                      continue
+                  if ch == "\\" and in_str:
+                      esc = True
+                      i += 1
+                      continue
+                  if ch == '"' and not in_str:
+                      if text[i:i + 3] == '"""':
+                          end = text.find('"""', i + 3)
+                          if end != -1 and end < pos:
+                              i = end + 3
+                              continue
+                      in_str = True
+                      i += 1
+                      continue
+                  if ch == '"' and in_str:
+                      in_str = False
+                      i += 1
+                      continue
+                  if not in_str and ch == "/" and i + 1 < len(text):
+                      if text[i + 1] == "/":
+                          in_lc = True
+                          i += 2
+                          continue
+                      if text[i + 1] == "*":
+                          in_bc = True
+                          i += 2
+                          continue
+                  if not in_str:
+                      if ch == "{":
+                          depth += 1
+                      elif ch == "}":
+                          depth = max(0, depth - 1)
+                  i += 1
+              return depth == 0
+
           def parse_types(fp, src):
               types = []
               pat = re.compile(
@@ -171,6 +237,33 @@ jobs:
                       )
                   )
               return types
+
+          def parse_functions(fp, src):
+              functions = []
+              pat = re.compile(
+                  r"^[ \t]*(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:public|private|internal|fileprivate|open)\s+)?"
+                  r"(?:static\s+|class\s+)?func\s+(\w+)\s*\(",
+                  re.MULTILINE,
+              )
+              for m in pat.finditer(src):
+                  if not is_top_level_position(src, m.start()):
+                      continue
+                  name = m.group(1)
+                  bp = src.find("{", m.end())
+                  if bp == -1:
+                      continue
+                  block = extract_balanced(src, bp)
+                  if not block:
+                      continue
+                  functions.append(
+                      FunctionDef(
+                          name=name,
+                          file_path=fp,
+                          source_code=src[m.start():bp] + block,
+                          start_line=src[:m.start()].count("\n") + 1,
+                      )
+                  )
+              return functions
 
           def parse_previews(fp, src):
               previews = []
@@ -226,6 +319,13 @@ jobs:
                           break
               return refs
 
+          def find_function_refs(src, known):
+              refs = set()
+              for fn in known:
+                  if re.search(rf"\b{re.escape(fn)}\s*\(", src):
+                      refs.add(fn)
+              return refs
+
           def resolve(targets, all_t, resolved=None, depth=0):
               if resolved is None:
                   resolved = set()
@@ -242,6 +342,24 @@ jobs:
                   if subs:
                       result.extend(resolve(subs, all_t, resolved, depth + 1))
                   result.append(td)
+              return result
+
+          def resolve_functions(targets, all_f, resolved=None, depth=0):
+              if resolved is None:
+                  resolved = set()
+              if depth > 20:
+                  return []
+              result = []
+              known = set(all_f.keys())
+              for fn in targets:
+                  if fn in resolved or fn not in all_f:
+                      continue
+                  resolved.add(fn)
+                  fd = all_f[fn]
+                  subs = find_function_refs(fd.source_code, known - resolved)
+                  if subs:
+                      result.extend(resolve_functions(subs, all_f, resolved, depth + 1))
+                  result.append(fd)
               return result
 
           def remove_modifier_blocks(src, patterns):
@@ -362,7 +480,7 @@ jobs:
               src = remove_unused_private_functions(src)
               return src
 
-          def generate(preview, all_t, same_file):
+          def generate(preview, all_t, all_f, same_file):
               lines = [
                   "// Auto-generated by generate_previews.py",
                   f"// Source: {preview.file_path}",
@@ -376,6 +494,7 @@ jobs:
                   "extension NSColor {",
                   "    static var systemBackground: NSColor { windowBackgroundColor }",
                   "    static var systemGroupedBackground: NSColor { windowBackgroundColor }",
+                  "    static var secondarySystemBackground: NSColor { controlBackgroundColor }",
                   "}",
                   "#endif",
                   "",
@@ -503,6 +622,15 @@ jobs:
                       seen.add(td.name)
                       sanitized_source = sanitize_swiftui_for_render(td.source_code)
                       lines.extend([f"// -- {td.kind} {td.name} (from {Path(td.file_path).name}) --", "", sanitized_source, ""])
+              function_search_space = [preview.source_code]
+              function_search_space.extend(td.source_code for td in resolved)
+              function_refs = find_function_refs("\n".join(function_search_space), set(all_f.keys()))
+              resolved_functions = resolve_functions(function_refs, all_f)
+              seen_functions = set()
+              for fd in resolved_functions:
+                  if fd.name not in seen_functions:
+                      seen_functions.add(fd.name)
+                      lines.extend([f"// -- func {fd.name} (from {Path(fd.file_path).name}) --", "", fd.source_code, ""])
               lines.extend(["// -- Preview --", ""])
               bm = re.search(r"\{", preview.source_code)
               if bm:
@@ -528,6 +656,7 @@ jobs:
               sf = find_swift_files(pp)
               print(f"   {len(sf)} Swift files")
               all_t = {}
+              all_f = {}
               all_p = []
               for fp in sf:
                   try:
@@ -538,6 +667,9 @@ jobs:
                   for td in parse_types(fp, src):
                       if td.name not in all_t:
                           all_t[td.name] = td
+                  for fd in parse_functions(fp, src):
+                      if fd.name not in all_f:
+                          all_f[fd.name] = fd
                   all_p.extend(parse_previews(fp, src))
               names = sorted(all_t.keys())
               print(f"   {len(all_t)} types ({', '.join(names[:8])}{'...' if len(names) > 8 else ''})")
@@ -548,7 +680,7 @@ jobs:
               os.makedirs(op, exist_ok=True)
               for prev in all_p:
                   sft = [td for td in all_t.values() if td.file_path == prev.file_path]
-                  content = generate(prev, all_t, sft)
+                  content = generate(prev, all_t, all_f, sft)
                   same_name = [p for p in all_p if p.file_name == prev.file_name]
                   if len(same_name) > 1:
                       idx = same_name.index(prev) + 1
