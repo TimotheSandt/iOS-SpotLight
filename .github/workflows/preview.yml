@@ -933,49 +933,34 @@ jobs:
             dark_failed=0
             grep -Fq "$(printf '%s\t%s\t%s' "$base" "light" "failed")" rendered/render-status.tsv && light_failed=1 || true
             grep -Fq "$(printf '%s\t%s\t%s' "$base" "dark" "failed")" rendered/render-status.tsv && dark_failed=1 || true
-            cat >> rendered/index.html << HTMLEOF
-              <div class="card">
-                <h2>${base}</h2>
-                <div class="modes">
-                  <div class="mode">
-          HTMLEOF
+            printf '%s\n' \
+              "  <div class=\"card\">" \
+              "    <h2>${base}</h2>" \
+              "    <div class=\"modes\">" \
+              "      <div class=\"mode\">" >> rendered/index.html
             if [ -f "$light_path" ]; then
-              cat >> rendered/index.html << HTMLEOF
-                    <img src="light/${base}.png" alt="${base} light" onclick="openLightbox(this)">
-              HTMLEOF
+              printf '%s\n' "        <img src=\"light/${base}.png\" alt=\"${base} light\" onclick=\"openLightbox(this)\">" >> rendered/index.html
             elif [ $light_failed -eq 1 ]; then
-              cat >> rendered/index.html << HTMLEOF
-                    <div class="missing">Rendu light echoue pour ce commit</div>
-              HTMLEOF
+              printf '%s\n' "        <div class=\"missing\">Rendu light echoue pour ce commit</div>" >> rendered/index.html
             else
-              cat >> rendered/index.html << HTMLEOF
-                    <div class="missing">Image light indisponible</div>
-              HTMLEOF
+              printf '%s\n' "        <div class=\"missing\">Image light indisponible</div>" >> rendered/index.html
             fi
-            cat >> rendered/index.html << HTMLEOF
-                    <p>Light</p>
-                  </div>
-                  <div class="mode">
-          HTMLEOF
+            printf '%s\n' \
+              "        <p>Light</p>" \
+              "      </div>" \
+              "      <div class=\"mode\">" >> rendered/index.html
             if [ -f "$dark_path" ]; then
-              cat >> rendered/index.html << HTMLEOF
-                    <img src="dark/${base}.png" alt="${base} dark" onclick="openLightbox(this)">
-              HTMLEOF
+              printf '%s\n' "        <img src=\"dark/${base}.png\" alt=\"${base} dark\" onclick=\"openLightbox(this)\">" >> rendered/index.html
             elif [ $dark_failed -eq 1 ]; then
-              cat >> rendered/index.html << HTMLEOF
-                    <div class="missing">Rendu dark echoue pour ce commit</div>
-              HTMLEOF
+              printf '%s\n' "        <div class=\"missing\">Rendu dark echoue pour ce commit</div>" >> rendered/index.html
             else
-              cat >> rendered/index.html << HTMLEOF
-                    <div class="missing">Image dark indisponible</div>
-              HTMLEOF
+              printf '%s\n' "        <div class=\"missing\">Image dark indisponible</div>" >> rendered/index.html
             fi
-            cat >> rendered/index.html << HTMLEOF
-                    <p>Dark</p>
-                  </div>
-                </div>
-              </div>
-          HTMLEOF
+            printf '%s\n' \
+              "        <p>Dark</p>" \
+              "      </div>" \
+              "    </div>" \
+              "  </div>" >> rendered/index.html
           done
 
           cat >> rendered/index.html << 'HTMLEOF'
