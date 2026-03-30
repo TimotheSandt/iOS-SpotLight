@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Generate self-contained preview files
         run: |
@@ -400,10 +402,6 @@ jobs:
                   changed = False
                   for match in func_pattern.finditer(src):
                       func_name = match.group(1)
-                      refs = len(re.findall(rf"\b{re.escape(func_name)}\s*\(", src))
-                      if refs > 1:
-                          continue
-
                       brace_pos = src.find("{", match.end())
                       if brace_pos == -1:
                           continue
@@ -413,7 +411,12 @@ jobs:
                           continue
 
                       line_start = src.rfind("\n", 0, match.start()) + 1
-                      src = src[:line_start] + src[brace_pos + len(block):]
+                      src_without_function = src[:line_start] + src[brace_pos + len(block):]
+                      refs = len(re.findall(rf"\b{re.escape(func_name)}\b", src_without_function))
+                      if refs > 0:
+                          continue
+
+                      src = src_without_function
                       changed = True
                       break
 
@@ -702,20 +705,94 @@ jobs:
       - name: List generated previews
         run: ls -la PreviewRenders/ || echo "Aucun fichier genere"
 
+      - name: Restore rendered previews cache
+        id: preview-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            rendered
+            .preview-cache
+          key: ${{ runner.os }}-swiftui-render-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-swiftui-render-${{ github.ref_name }}-
+            ${{ runner.os }}-swiftui-render-
+
+      - name: Determine impacted previews
+        id: impacted
+        run: |
+          mkdir -p rendered/light rendered/dark .preview-cache
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+
+          root = Path(".")
+          previews_dir = root / "PreviewRenders"
+          cache_dir = root / ".preview-cache"
+          previous_manifest = cache_dir / "preview-hashes.txt"
+          current_manifest = cache_dir / "preview-hashes.new.txt"
+          changed_file = cache_dir / "changed-previews.txt"
+          deleted_file = cache_dir / "deleted-previews.txt"
+
+          def digest(path: Path) -> str:
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+
+          def read_manifest(path: Path) -> dict[str, str]:
+              data: dict[str, str] = {}
+              if not path.exists():
+                  return data
+              for line in path.read_text(encoding="utf-8").splitlines():
+                  if not line.strip():
+                      continue
+                  name, sha = line.split("\t", 1)
+                  data[name] = sha
+              return data
+
+          current = {path.stem: digest(path) for path in sorted(previews_dir.glob("*.swift"))}
+          previous = read_manifest(previous_manifest)
+
+          current_manifest.write_text(
+              "".join(f"{name}\t{sha}\n" for name, sha in sorted(current.items())),
+              encoding="utf-8",
+          )
+
+          changed = sorted(name for name, sha in current.items() if previous.get(name) != sha)
+          deleted = sorted(name for name in previous.keys() if name not in current)
+
+          changed_file.write_text("\n".join(changed) + ("\n" if changed else ""), encoding="utf-8")
+          deleted_file.write_text("\n".join(deleted) + ("\n" if deleted else ""), encoding="utf-8")
+
+          print(f"Changed previews: {len(changed)}")
+          for name in changed:
+              print(f"  - {name}")
+          print(f"Deleted previews: {len(deleted)}")
+          for name in deleted:
+              print(f"  - {name}")
+          PY
+
+          while IFS= read -r deleted; do
+            [ -n "$deleted" ] || continue
+            rm -f "rendered/light/${deleted}.png" "rendered/dark/${deleted}.png"
+          done < .preview-cache/deleted-previews.txt
+
+          changed_count="$(wc -l < .preview-cache/changed-previews.txt | tr -d ' ')"
+          echo "changed_count=${changed_count}" >> "$GITHUB_OUTPUT"
+
       - name: Install swiftui-render
+        if: steps.impacted.outputs.changed_count != '0'
         run: |
           brew tap olliewagner/swiftui-render
           brew install swiftui-render
           swiftui-render --version
 
-      - name: Render all previews
+      - name: Render impacted previews
+        if: steps.impacted.outputs.changed_count != '0'
         run: |
-          mkdir -p rendered/light rendered/dark
           failures=0
           : > rendered/render-errors.txt
-          for f in PreviewRenders/*.swift; do
+          while IFS= read -r base; do
+            [ -n "$base" ] || continue
+            f="PreviewRenders/${base}.swift"
             [ -f "$f" ] || continue
-            base="$(basename "$f" .swift)"
             echo ""
             echo "Rendering $base..."
             light_out="rendered/light/${base}.png"
@@ -730,7 +807,7 @@ jobs:
               echo "Echec dark: $base" | tee -a rendered/render-errors.txt
               failures=1
             fi
-          done
+          done < .preview-cache/changed-previews.txt
           echo ""
           find rendered -name "*.png" | sort
           png_count="$(find rendered -name '*.png' | wc -l | tr -d ' ')"
@@ -745,6 +822,12 @@ jobs:
             cat rendered/render-errors.txt
             exit 1
           fi
+
+      - name: Skip render when no preview changed
+        if: steps.impacted.outputs.changed_count == '0'
+        run: |
+          echo "Aucun preview impacte, reutilisation du cache rendered/"
+          find rendered -name "*.png" | sort || true
 
       - name: Generate preview gallery
         run: |
@@ -836,6 +919,16 @@ jobs:
             </script>
           </body></html>
           HTMLEOF
+
+          cp .preview-cache/preview-hashes.new.txt .preview-cache/preview-hashes.txt
+
+      - name: Save rendered previews cache
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            rendered
+            .preview-cache
+          key: ${{ runner.os }}-swiftui-render-${{ github.ref_name }}-${{ github.sha }}
 
       # Déployer sur GitHub Pages
       - name: Setup Pages
