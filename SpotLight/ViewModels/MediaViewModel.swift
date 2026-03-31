@@ -27,6 +27,28 @@ class MediaViewModel {
     func media(withID id: UUID) -> (any Media)? {
         media.first { $0.id == id }
     }
+
+    func getFavoriteFilm() -> Film? {
+        let favoriteFilm = media.first { $0.interaction.isFavorite && $0 is Film } ?? nil
+        if let favoriteFilm {
+            return favoriteFilm
+        }
+        let sortedFilms = media.compactMap { media -> (Double?, Int) in
+            media.isFilm ? (media.interaction.note, media.interaction.watchHistory.count) : (nil, 0)
+        }.sorted { ($0.0 ?? 0) > ($1.0 ?? 0) || ($0.0 ?? 0) == ($1.0 ?? 0) && $0.1 > $1.1 }.first?.0
+        return sortedFilms ?? media.first { $0 is Film }
+    }
+
+    func getFavoriteSerie() -> Serie? {
+        let favoriteSerie = media.first { $0.interaction.isFavorite && $0 is Serie } ?? nil
+        if let favoriteSerie {
+            return favoriteSerie
+        }
+        let sortedSeries = media.compactMap { media -> (Double?, Int) in
+            media.isSerie ? (media.interaction.note, media.interaction.watchHistory.count) : (nil, 0)
+        }.sorted { ($0.0 ?? 0) > ($1.0 ?? 0) || ($0.0 ?? 0) == ($1.0 ?? 0) && $0.1 > $1.1 }.first?.0
+        return sortedSeries ?? media.first { $0 is Serie }
+    }
     
     func addFilm(title: String, creator: String, annee: Int, duration: Int, releaseYear: Int , pays: String, platform: Platform, genres: [Genre], status: Status, note: Double?, comment: String?, date: Date?) {
         var watchHistory: [WatchSession] = []
@@ -99,6 +121,20 @@ class MediaViewModel {
         updateMedia(withID: id) { media in
             media.interaction.watchHistory.append(WatchSession(date: date, status: status))
             media.interaction.status = status
+        }
+    }
+
+    func toggleFavorite(for id: UUID) {
+        if let currentFavorite = media.first(where: { 
+                $0.interaction.isFavorite && $0.id != id && 
+                ($0 is Film && media.first(where: { $0.id == id }) is Film || 
+                ($0 is Serie && media.first(where: { $0.id == id }) is Serie }) {
+            updateMedia(withID: currentFavorite.id) { media in
+                media.interaction.isFavorite = false
+            }
+        }
+        updateMedia(withID: id) { media in
+            media.interaction.isFavorite.toggle()
         }
     }
 

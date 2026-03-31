@@ -17,7 +17,7 @@ struct GlobalView: View {
                 StatisticsView()
             }
             Tab("Profil", systemImage: "person") {
-                EmptyView()
+                ProfileView()
             }
         }
     }
@@ -27,4 +27,5 @@ struct GlobalView: View {
     GlobalView()
         .environment(MediaViewModel())
         .environment(StatisticsViewModel())
+        .environment(ProfileViewModel())
 }

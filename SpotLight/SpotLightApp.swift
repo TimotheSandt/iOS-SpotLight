@@ -12,12 +12,14 @@ struct SpotLightApp: App {
     
     let mediaViewModel = MediaViewModel()
     let statsViewModel = StatisticsViewModel()
+    let profileViewModel = ProfileViewModel()
     
     var body: some Scene {
         WindowGroup {
             GlobalView()
                 .environment(mediaViewModel)
                 .environment(statsViewModel)
+                .environment(profileViewModel)
         }
     }
 }
