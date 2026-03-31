@@ -19,11 +19,10 @@ struct MediaPieChartView: View {
                 .padding(.bottom, 5)
             
             Chart(data, id: \.label) { item in
-                // SectorMark crée les portions du camembert
                 SectorMark(
                     angle: .value("Sessions", item.count),
-                    innerRadius: .ratio(0.5), // Optionnel : transforme le camembert en Donut
-                    angularInset: 1.5         // Optionnel : ajoute un petit espace entre les parts
+                    innerRadius: .ratio(0.5),
+                    angularInset: 1.5 
                 )
                 .foregroundStyle(by: .value("Catégorie", item.label))
                 .annotation(position: .overlay) {

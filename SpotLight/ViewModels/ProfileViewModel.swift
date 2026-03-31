@@ -11,7 +11,7 @@ import Foundation
 class ProfileViewModel {
     var firstName: String = "Timothe"
     var lastName: String = "Sandt"
-    var age: Int = 21
+    var age: Int = 20
 
     var fullName: String {
         "\(firstName) \(lastName)".trimmingCharacters(in: .whitespacesAndNewlines)
