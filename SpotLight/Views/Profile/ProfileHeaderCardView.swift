@@ -34,6 +34,7 @@ struct ProfileHeaderCardView: View {
         .cornerRadius(20)
         .sheet(isPresented: $showEditSheet) {
             ProfileEditSheetView()
+                .presentationDetents([.medium])
         }
     }
 }
