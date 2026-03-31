@@ -13,6 +13,16 @@ struct WatchSession: Identifiable, Codable {
     var id = UUID()
     var date: Date
     var status: Status
+    var seasonNumber: Int? = nil
+    var episodeNumber: Int? = nil
+
+    var episodeLabel: String? {
+        guard let seasonNumber, let episodeNumber else {
+            return nil
+        }
+
+        return "S\(seasonNumber)E\(episodeNumber)"
+    }
 }
 
 

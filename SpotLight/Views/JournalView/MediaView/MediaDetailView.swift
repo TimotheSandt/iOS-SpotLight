@@ -1,31 +1,25 @@
-//
-//  MediaDetailView.swift
-//  SpotLight
-//
-//  Created by sandt timothe on 30/03/2026.
-//
-
 import SwiftUI
 
 struct MediaDetailView: View {
-    
     @Environment(MediaViewModel.self) private var data
     let mediaID: UUID
     @State private var showAddInteraction = false
     @State private var newStatus: Status = .watched
     @State private var newDate: Date = Date()
+    @State private var selectedSeasonNumber: Int = 1
+    @State private var selectedEpisodeNumber: Int = 1
 
     private var media: (any Media)? {
         data.media(withID: mediaID)
     }
-    
+
     var body: some View {
         Group {
             if let media {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         SimplifyMediaCardView(media: media)
-                        if media.interaction.isWatched { // s'affiche qui si il a été vu
+                        if media.interaction.isWatched {
                             Button {
                                 data.toggleFavorite(for: mediaID)
                             } label: {
@@ -51,9 +45,8 @@ struct MediaDetailView: View {
                 ContentUnavailableView("Media introuvable", systemImage: "exclamationmark.triangle")
             }
         }
-        .navigationTitle("Détails")
+        .navigationTitle("Details")
         .navigationBarTitleDisplayMode(.inline)
-        
         .sheet(isPresented: $showAddInteraction) {
             VStack(spacing: 25) {
                 Text("Ajouter un visionnage")
@@ -71,13 +64,41 @@ struct MediaDetailView: View {
                     DatePicker("Date", selection: $newDate, displayedComponents: .date)
                         .labelsHidden()
                         .datePickerStyle(.graphical)
+
+                    if let serie = media as? Serie, !serie.seasons.isEmpty {
+                        Picker("Saison", selection: $selectedSeasonNumber) {
+                            ForEach(serie.seasons.sorted(by: { $0.number < $1.number })) { season in
+                                Text("Saison \(season.number)").tag(season.number)
+                            }
+                        }
+                        .pickerStyle(.menu)
+
+                        if let season = serie.season(number: selectedSeasonNumber) {
+                            Picker("Episode", selection: $selectedEpisodeNumber) {
+                                ForEach(1...season.episodeCount, id: \.self) { episode in
+                                    Text("Episode \(episode)").tag(episode)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                        }
+                    }
                 }
                 .padding()
                 .background(Color(uiColor: .secondarySystemBackground))
                 .cornerRadius(15)
 
                 Button {
-                    data.addWatchSession(for: mediaID, status: newStatus, date: newDate)
+                    if media is Serie {
+                        data.addWatchSession(
+                            for: mediaID,
+                            status: newStatus,
+                            date: newDate,
+                            seasonNumber: selectedSeasonNumber,
+                            episodeNumber: selectedEpisodeNumber
+                        )
+                    } else {
+                        data.addWatchSession(for: mediaID, status: newStatus, date: newDate)
+                    }
                     showAddInteraction = false
                 } label: {
                     Text("Confirmer")
@@ -92,10 +113,28 @@ struct MediaDetailView: View {
             .padding()
             .presentationDetents([.fraction(0.8)])
             .presentationDragIndicator(.visible)
+            .onAppear {
+                if let nextEpisode = data.nextEpisodeToWatch(for: mediaID) {
+                    selectedSeasonNumber = nextEpisode.seasonNumber
+                    selectedEpisodeNumber = nextEpisode.episodeNumber
+                }
+            }
+            .onChange(of: selectedSeasonNumber) { _, newValue in
+                guard let serie = media as? Serie,
+                      let season = serie.season(number: newValue) else {
+                    return
+                }
+
+                if selectedEpisodeNumber > season.episodeCount {
+                    selectedEpisodeNumber = season.episodeCount
+                }
+                if selectedEpisodeNumber < 1 {
+                    selectedEpisodeNumber = 1
+                }
+            }
         }
     }
 }
-
 
 #Preview("Avec Avis (Inception)") {
     MediaDetailView(mediaID: Film.testData[0].id)
@@ -111,3 +150,4 @@ struct MediaDetailView: View {
     MediaDetailView(mediaID: Film.testData[1].id)
         .environment(MediaViewModel())
 }
+

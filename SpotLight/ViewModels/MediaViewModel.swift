@@ -92,11 +92,86 @@ class MediaViewModel {
         }
     }
 
-    func addWatchSession(for id: UUID, status: Status, date: Date) {
+    func addWatchSession(
+        for id: UUID,
+        status: Status,
+        date: Date,
+        seasonNumber: Int? = nil,
+        episodeNumber: Int? = nil
+    ) {
         updateMedia(withID: id) { media in
-            media.interaction.watchHistory.append(WatchSession(date: date, status: status))
+            media.interaction.watchHistory.append(
+                WatchSession(
+                    date: date,
+                    status: status,
+                    seasonNumber: seasonNumber,
+                    episodeNumber: episodeNumber
+                )
+            )
             media.interaction.status = status
         }
+    }
+
+    func nextEpisodeToWatch(for id: UUID) -> (seasonNumber: Int, episodeNumber: Int)? {
+        guard let serie = media(withID: id) as? Serie else {
+            return nil
+        }
+
+        let orderedSeasons = serie.seasons.sorted(by: { $0.number < $1.number })
+        guard let firstSeason = orderedSeasons.first else {
+            return nil
+        }
+
+        let lastEpisodeSession = serie.interaction.watchHistory
+            .filter { $0.status != .wishlist && $0.seasonNumber != nil && $0.episodeNumber != nil }
+            .sorted { $0.date > $1.date }
+            .first
+
+        guard let lastEpisodeSession,
+              let seasonNumber = lastEpisodeSession.seasonNumber,
+              let episodeNumber = lastEpisodeSession.episodeNumber else {
+            let watchedCount = serie.interaction.watchHistory.filter { $0.status != .wishlist }.count
+            if watchedCount == 0 {
+                return (firstSeason.number, 1)
+            }
+
+            var remainingIndex = watchedCount + 1
+
+            for season in orderedSeasons {
+                if remainingIndex <= season.episodeCount {
+                    return (season.number, remainingIndex)
+                }
+                remainingIndex -= season.episodeCount
+            }
+
+            return nil
+        }
+
+        if let currentSeason = serie.season(number: seasonNumber),
+           episodeNumber < currentSeason.episodeCount {
+            return (seasonNumber, episodeNumber + 1)
+        }
+
+        guard let currentSeasonIndex = orderedSeasons.firstIndex(where: { $0.number == seasonNumber }),
+              currentSeasonIndex + 1 < orderedSeasons.count else {
+            return nil
+        }
+
+        return (orderedSeasons[currentSeasonIndex + 1].number, 1)
+    }
+
+    func addNextEpisodeSession(for id: UUID, status: Status = .watched, date: Date = Date()) {
+        guard let nextEpisode = nextEpisodeToWatch(for: id) else {
+            return
+        }
+
+        addWatchSession(
+            for: id,
+            status: status,
+            date: date,
+            seasonNumber: nextEpisode.seasonNumber,
+            episodeNumber: nextEpisode.episodeNumber
+        )
     }
 
     func toggleFavorite(for id: UUID) {

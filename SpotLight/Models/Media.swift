@@ -106,6 +106,17 @@ struct Serie: Media {
     }
     
     var displayDuration: Int { TotalDuration }
+    var averageEpisodeDuration: Int {
+        guard numberOfEpisodes > 0 else {
+            return 0
+        }
+
+        return TotalDuration / numberOfEpisodes
+    }
+
+    func season(number: Int) -> Season? {
+        seasons.first { $0.number == number }
+    }
     
     
     

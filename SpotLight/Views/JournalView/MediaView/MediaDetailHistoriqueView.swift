@@ -37,7 +37,15 @@ struct MediaDetailHistoriqueView: View {
                     HStack {
                         Image(systemName: "calendar")
                             .foregroundStyle(.blue)
-                        Text(session.date.formatted(date: .long, time: .omitted))
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(session.date.formatted(date: .long, time: .omitted))
+
+                            if let episodeLabel = session.episodeLabel {
+                                Text(episodeLabel)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                         Spacer()
                         Text(session.status.rawValue)
                             .font(.caption)

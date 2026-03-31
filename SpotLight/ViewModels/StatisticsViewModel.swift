@@ -66,7 +66,9 @@ class StatisticsViewModel {
                 
                 // Sessions et Temps
                 sessionCount += sessionsInRange.count
-                totalDuration += sessionsInRange.count * media.displayDuration
+                totalDuration += sessionsInRange.reduce(0) { partialResult, session in
+                    partialResult + durationForSession(media: media, session: session)
+                }
                 
                 // Notes et Avis
                 if let note = media.interaction.note { ratings.append(note) }
@@ -108,7 +110,7 @@ class StatisticsViewModel {
 
         for media in mediaList {
             for session in media.interaction.watchHistory {
-                let duration = (session.status != .wishlist) ? media.displayDuration : 0
+                let duration = durationForSession(media: media, session: session)
                 if range.contains(session.date) && duration > 0 {
                     let bucket = bucketDate(for: session.date, in: range, unit: unit)
                     groupedDurations[bucket, default: 0] += duration
@@ -249,5 +251,22 @@ class StatisticsViewModel {
             current = calendar.date(byAdding: unit.component, value: unit.value, to: current) ?? Date.distantFuture
         }
         return dates
+    }
+
+    private func durationForSession(media: any Media, session: WatchSession) -> Int {
+        guard session.status != .wishlist else {
+            return 0
+        }
+
+        if let serie = media as? Serie {
+            if let seasonNumber = session.seasonNumber,
+               let season = serie.season(number: seasonNumber) {
+                return season.averageDuration
+            }
+
+            return serie.averageEpisodeDuration
+        }
+
+        return media.displayDuration
     }
 }

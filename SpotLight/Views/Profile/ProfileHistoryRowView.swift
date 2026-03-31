@@ -27,7 +27,7 @@ struct ProfileHistoryRowView: View {
                     .font(.headline)
                     .foregroundStyle(.primary)
 
-                Text(media.mediaType.rawValue)
+                Text(session.episodeLabel ?? media.mediaType.rawValue)
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
