@@ -37,7 +37,7 @@ struct MediaCardView: View {
                         .foregroundStyle(.white)
                         .lineLimit(1)
 
-                    Text("\(media.creator) • \(media.releaseYear)")
+                    Text("\(media.creator) - \(media.releaseYear)")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.8))
                         .lineLimit(1)

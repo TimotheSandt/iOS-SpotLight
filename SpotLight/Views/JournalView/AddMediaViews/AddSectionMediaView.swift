@@ -17,8 +17,12 @@ struct AddSectionMediaView: View {
                 .font(.footnote)
                 .foregroundStyle(.gray)
                 .frame(maxWidth: .infinity, alignment: .leading)
-
-            TextField("Titre \((mediaType == .film) ? \"du film\" : \"de la serie\")", text: $title)
+            
+            
+            var titleHint: String {
+                (mediaType == .film) ? "Titre du film" : "Titre de la série"
+            }
+            TextField("Titre \(titleHint)", text: $title)
                 .padding(.horizontal)
                 .frame(height: 35)
                 .overlay(Capsule().stroke(Color.gray.opacity(0.3), lineWidth: 1))
@@ -88,13 +92,13 @@ struct AddSectionMediaView: View {
                     ForEach($seasons) { $season in
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
-                                Text("Saison")
+                                Text("Saison \(season.number)")
                                     .font(.caption.weight(.semibold))
 
                                 Spacer()
 
                                 Button(role: .destructive) {
-                                    let seasonID = season.wrappedValue.id
+                                    let seasonID = season.id
                                     seasons.removeAll { $0.id == seasonID }
                                 } label: {
                                     Image(systemName: "trash")
@@ -102,21 +106,16 @@ struct AddSectionMediaView: View {
                             }
 
                             HStack {
-                                TextField("Numero", text: $season.number)
+                                TextField("Episodes", text: $season.episodeCount)
                                     .padding(.horizontal)
                                     .frame(height: 35)
                                     .overlay(Capsule().stroke(Color.gray.opacity(0.3), lineWidth: 1))
-
-                                TextField("Episodes", text: $season.episodeCount)
+                                TextField("Duree moyenne (min)", text: $season.averageDuration)
                                     .padding(.horizontal)
                                     .frame(height: 35)
                                     .overlay(Capsule().stroke(Color.gray.opacity(0.3), lineWidth: 1))
                             }
 
-                            TextField("Duree moyenne (min)", text: $season.averageDuration)
-                                .padding(.horizontal)
-                                .frame(height: 35)
-                                .overlay(Capsule().stroke(Color.gray.opacity(0.3), lineWidth: 1))
                         }
                         .padding()
                         .background(Color(uiColor: .secondarySystemBackground))

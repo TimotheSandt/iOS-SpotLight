@@ -75,7 +75,7 @@ struct JournalView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         NavigationLink(value: true) {
-                            Text("Add")
+                            Text("Ajouter")
                         }
                     }
                 }
