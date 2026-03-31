@@ -37,52 +37,73 @@ class MediaViewModel {
             .map { $0 }
     }
 
-    func favoriteGenre(from mediaList: [any Media]) -> [(label: String, count: Int)] {
+    func getFavoriteGenre() -> [(label: String, count: Int)] {
         let genresCount = media
-            .flatMap { $0.genres }
-            .reduce(into: [:String: Int]()) { (result, genre) in
-                var count = result[genre, default: 0]
-                count += media.filter { $0.genres.contains(genre) }.compactMap { $0.interaction.watchHistory.count }.reduce(0, +)
-                result[genre] = count
-                return result
+            .flatMap { media in media.genres.map { ($0.rawValue, media.interaction.watchHistory.count) } }
+            .reduce(into: [String: Int]()) { result, tuple in
+                result[tuple.0, default: 0] += tuple.1
             }
-        let favoriteGenre = genresCount.max { $0.value < $1.value }?.key
-        return [favoriteGenre]
+        
+        // On retourne le top 1 (ou vide si rien)
+        if let favorite = genresCount.max(by: { $0.value < $1.value }) {
+            return [(label: favorite.key, count: favorite.value)]
+        }
+        return []
     }
 
-    func favoritePlatforms(from mediaList: [any Media]) -> [(label: String, count: Int)] {
+    func getFavoritePlatforms() -> [(label: String, count: Int)] {
         let platformsCount = media
-            .flatMap { $0.platforms }
-            .reduce(into: [:String: Int]()) { (result, platform) in
-                var count = result[platform, default: 0]
-                count += media.filter { $0.platforms.contains(platform) }.compactMap { $0.interaction.watchHistory.count }.reduce(0, +)
-                result[platform] = count
-                return result
+            .flatMap { media in media.platforms.map { ($0.rawValue, media.interaction.watchHistory.count) } }
+            .reduce(into: [String: Int]()) { result, tuple in
+                result[tuple.0, default: 0] += tuple.1
             }
-        let favoritePlatform = platformsCount.max { $0.value < $1.value }?.key
-        return [favoritePlatform]
+        
+        if let favorite = platformsCount.max(by: { $0.value < $1.value }) {
+            return [(label: favorite.key, count: favorite.value)]
+        }
+        return []
     }
 
     func getFavoriteFilm() -> Film? {
-        let favoriteFilm = media.first { $0.interaction.isFavorite && $0 is Film } ?? nil
-        if let favoriteFilm {
-            return favoriteFilm
+        // 1. On cherche d'abord s'il y a un favori explicite
+        if let explicitFavorite = media.first(where: { $0.interaction.isFavorite && $0 is Film }) as? Film {
+            return explicitFavorite
         }
-        let sortedFilms = media.compactMap { media -> (Double?, Int) in
-            media.isFilm ? (media.interaction.note, media.interaction.watchHistory.count) : (nil, 0)
-        }.sorted { ($0.0 ?? 0) > ($1.0 ?? 0) || ($0.0 ?? 0) == ($1.0 ?? 0) && $0.1 > $1.1 }.first?.0
-        return sortedFilms ?? media.first { $0 is Film }
+        
+        // 2. Sinon, on filtre tous les films pour trouver le meilleur
+        let allFilms = media.compactMap { $0 as? Film }
+        
+        // 3. On trie par note, puis par nombre de visionnages
+        return allFilms.sorted { lhs, rhs in
+            let noteLhs = lhs.interaction.note ?? 0
+            let noteRhs = rhs.interaction.note ?? 0
+            
+            if noteLhs != noteRhs {
+                return noteLhs > noteRhs
+            }
+            return lhs.interaction.watchHistory.count > rhs.interaction.watchHistory.count
+        }.first
     }
 
     func getFavoriteSerie() -> Serie? {
-        let favoriteSerie = media.first { $0.interaction.isFavorite && $0 is Serie } ?? nil
-        if let favoriteSerie {
-            return favoriteSerie
+        // 1. On cherche d'abord s'il y a un favori explicite
+        if let explicitFavorite = media.first(where: { $0.interaction.isFavorite && $0 is Serie }) as? Serie {
+            return explicitFavorite
         }
-        let sortedSeries = media.compactMap { media -> (Double?, Int) in
-            media.isSerie ? (media.interaction.note, media.interaction.watchHistory.count) : (nil, 0)
-        }.sorted { ($0.0 ?? 0) > ($1.0 ?? 0) || ($0.0 ?? 0) == ($1.0 ?? 0) && $0.1 > $1.1 }.first?.0
-        return sortedSeries ?? media.first { $0 is Serie }
+        
+        // 2. Sinon, on filtre toutes les séries
+        let allSeries = media.compactMap { $0 as? Serie }
+        
+        // 3. Tri identique
+        return allSeries.sorted { lhs, rhs in
+            let noteLhs = lhs.interaction.note ?? 0
+            let noteRhs = rhs.interaction.note ?? 0
+            
+            if noteLhs != noteRhs {
+                return noteLhs > noteRhs
+            }
+            return lhs.interaction.watchHistory.count > rhs.interaction.watchHistory.count
+        }.first
     }
     
     func addFilm(title: String, creator: String, annee: Int, duration: Int, releaseYear: Int , pays: String, platform: Platform, genres: [Genre], status: Status, note: Double?, comment: String?, date: Date?) {
@@ -160,17 +181,20 @@ class MediaViewModel {
     }
 
     func toggleFavorite(for id: UUID) {
-        if let currentFavorite = media.first(where: { 
-                $0.interaction.isFavorite && $0.id != id && 
-                ($0 is Film && media.first(where: { $0.id == id }) is Film || 
-                ($0 is Serie && media.first(where: { $0.id == id }) is Serie }) {
-            updateMedia(withID: currentFavorite.id) { media in
-                media.interaction.isFavorite = false
+        let selectedMedia = media.first { $0.id == id }
+        
+        // Si on veut mettre en favori, on retire l'ancien favori du même type
+        if let selected = selectedMedia, !selected.interaction.isFavorite {
+            let sameTypeFavorites = media.filter {
+                $0.interaction.isFavorite && type(of: $0) == type(of: selected)
+            }
+            
+            for fav in sameTypeFavorites {
+                updateMedia(withID: fav.id) { $0.interaction.isFavorite = false }
             }
         }
-        updateMedia(withID: id) { media in
-            media.interaction.isFavorite.toggle()
-        }
+        
+        updateMedia(withID: id) { $0.interaction.isFavorite.toggle() }
     }
 
     private func updateMedia(withID id: UUID, mutate: (inout any Media) -> Void) {
