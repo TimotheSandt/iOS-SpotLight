@@ -98,8 +98,13 @@ struct AddSectionMediaView: View {
                                 Spacer()
 
                                 Button(role: .destructive) {
-                                    let seasonID = season.id
-                                    seasons.removeAll { $0.id == seasonID }
+                                    let idToDelete = season.id
+                                        
+                                    seasons.removeAll { $0.id == idToDelete }
+                                    
+                                    for index in seasons.indices {
+                                        seasons[index].number = String(index + 1)
+                                    }
                                 } label: {
                                     Image(systemName: "trash")
                                 }
