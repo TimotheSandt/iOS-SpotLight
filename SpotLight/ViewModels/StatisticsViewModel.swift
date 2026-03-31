@@ -7,15 +7,6 @@
 
 import Foundation
 
-struct ProfileHistoryItem: Identifiable {
-    let id: UUID
-    let mediaID: UUID
-    let title: String
-    let subtitle: String
-    let watchedDateText: String
-    let watchCountText: String
-}
-
 @Observable
 class StatisticsViewModel {
 
@@ -177,21 +168,20 @@ class StatisticsViewModel {
 
     // Favorite
 
-    func recentMedia(from mediaList: [any Media]) -> [ProfileHistoryItem] {
+    func recentMedia(from mediaList: [any Media]) -> [(media: any Media, session: WatchSession)] {
         mediaList
-            .filter { !$0.interaction.watchHistory.isEmpty }
-            .sorted { ($0.interaction.lastWatchedDate ?? .distantPast) > ($1.interaction.lastWatchedDate ?? .distantPast) }
-            .prefix(5)
-            .map { media in
-                ProfileHistoryItem(
-                    id: media.id,
-                    mediaID: media.id,
-                    title: media.title,
-                    subtitle: media.mediaType.rawValue,
-                    watchedDateText: media.interaction.lastWatchedDate?.formatted(.dateTime.day().month().year()) ?? "-",
-                    watchCountText: "\(media.interaction.watchHistory.count)x"
-                )
+            .flatMap { media in
+                media.interaction.watchHistory.compactMap { session -> (media: any Media, session: WatchSession)? in
+                    guard session.status != .wishlist else {
+                        return nil
+                    }
+
+                    return (media: media, session: session)
+                }
             }
+            .sorted { $0.session.date > $1.session.date }
+            .prefix(5)
+            .map { $0 }
     }
 
     func rankedGenres(from mediaList: [any Media]) -> [(label: String, count: Int)] {
