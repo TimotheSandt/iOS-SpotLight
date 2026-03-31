@@ -80,7 +80,8 @@ struct StatisticsView: View {
                             value: "\(summary.reviewCount)",
                         )
                     }
-
+                    
+                    TimeChartView()
 
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Definition")
@@ -93,7 +94,6 @@ struct StatisticsView: View {
                 }
                 .padding()
                 
-                TimeChartView()
             }
             .navigationTitle("Statistiques")
         }
