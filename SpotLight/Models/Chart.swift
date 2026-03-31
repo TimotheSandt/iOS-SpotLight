@@ -8,7 +8,9 @@
 import Foundation
 
 struct ChartData: Identifiable {
-    let id = UUID()
+    var id: Date { startDate }
+    let startDate: Date
+    let endDate: Date
     let date: Date
     let duration: Int
 }

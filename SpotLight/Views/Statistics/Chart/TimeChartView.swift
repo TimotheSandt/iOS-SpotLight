@@ -8,45 +8,54 @@
 import SwiftUI
 import Charts
 
-
-
-
-
 struct TimeChartView: View {
     @Environment(MediaViewModel.self) private var data
     @Environment(StatisticsViewModel.self) private var stats
-    
+
+    private var dataPoints: [ChartData] {
+        stats.chartData(from: data.media)
+    }
+
+    private var configuration: ChartConfiguration {
+        stats.chartConfiguration
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Temps de visionnage")
                 .font(.headline)
 
-            Chart {
-                let dataPoints = stats.chartData(from: data.media)
-                let unit = stats.strideUnit
-                
-                ForEach(dataPoints) { point in
-                    BarMark(
-                        // On utilise l'unité calculée pour la largeur des barres
-                        x: .value("Date", point.date, unit: unit.component),
-                        y: .value("Durée", point.duration)
-                    )
-                    .foregroundStyle(Color.blue.gradient)
-                    .cornerRadius(6)
+            if dataPoints.isEmpty {
+                ContentUnavailableView(
+                    "Aucune donnee",
+                    systemImage: "chart.bar.xaxis",
+                    description: Text("Ajoutez des sessions dans la periode selectionnee pour afficher le graphique.")
+                )
+                .frame(height: 200)
+            } else {
+                Chart {
+                    ForEach(dataPoints) { point in
+                        BarMark(
+                            xStart: .value("Debut", point.startDate),
+                            xEnd: .value("Fin", point.endDate),
+                            y: .value("Duree", point.duration)
+                        )
+                        .foregroundStyle(Color.blue.gradient)
+                        .cornerRadius(6)
+                    }
                 }
-            }
-            .frame(height: 200)
-            .chartXAxis {
-                let unit = stats.strideUnit
-                AxisMarks(values: .stride(by: unit.component, count: unit.value)) { value in
-                    AxisGridLine()
-                    AxisTick()
-                    AxisValueLabel(format: axisFormat(for: unit.component))
+                .frame(height: 200)
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: configuration.component, count: configuration.bucketSize)) { _ in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel(format: axisFormat)
+                    }
                 }
-            }
-            .chartYAxis {
-                AxisMarks(position: .leading) { value in
-                    AxisValueLabel("\(value.as(Int.self) ?? 0)m")
+                .chartYAxis {
+                    AxisMarks(position: .leading) { value in
+                        AxisValueLabel("\(value.as(Int.self) ?? 0)m")
+                    }
                 }
             }
         }
@@ -54,14 +63,12 @@ struct TimeChartView: View {
         .background(Color(uiColor: .secondarySystemBackground))
         .cornerRadius(18)
     }
-    
-    // Helper pour le formatage des labels de l'axe X
-    private func axisFormat(for component: Calendar.Component) -> Date.FormatStyle {
-        if component == .month {
+
+    private var axisFormat: Date.FormatStyle {
+        if configuration.component == .month {
             return .dateTime.month(.abbreviated)
-        } else {
-            return .dateTime.day().month(.abbreviated)
         }
+        return .dateTime.day().month(.abbreviated)
     }
 }
 
