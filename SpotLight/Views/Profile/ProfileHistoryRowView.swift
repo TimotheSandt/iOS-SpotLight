@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ProfileHistoryRowView: View {
-    let item: any Media
+    let item: ProfileHistoryItem
 
     var body: some View {
         HStack(spacing: 12) {
@@ -17,8 +17,8 @@ struct ProfileHistoryRowView: View {
                     .fill(.ultraThinMaterial)
                     .frame(width: 54, height: 72)
 
-//                Image(systemName: item.subtitle == MediaType.film.rawValue ? "film" : "tv")
-//                    .foregroundStyle(.secondary)
+                Image(systemName: item.subtitle == MediaType.film.rawValue ? "film" : "tv")
+                    .foregroundStyle(.secondary)
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -26,14 +26,20 @@ struct ProfileHistoryRowView: View {
                     .font(.headline)
                     .foregroundStyle(.primary)
 
-                Text(item.description)
+                Text(item.subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-//                Text(item.interaction.watchHistory.last?.date ?? "Unknown")
-//                    .font(.caption)
-//                    .foregroundStyle(.secondary)
+                Text(item.watchedDateText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
+
+            Spacer()
+
+            Text(item.watchCountText)
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
         }
         .padding()
         .background(Color(uiColor: .systemBackground))

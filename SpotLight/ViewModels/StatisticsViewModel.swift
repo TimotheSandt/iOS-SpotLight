@@ -7,6 +7,14 @@
 
 import Foundation
 
+struct ProfileHistoryItem: Identifiable {
+    let id: UUID
+    let mediaID: UUID
+    let title: String
+    let subtitle: String
+    let watchedDateText: String
+    let watchCountText: String
+}
 
 @Observable
 class StatisticsViewModel {
@@ -22,6 +30,8 @@ class StatisticsViewModel {
         self.customStartDate = calendar.date(byAdding: .month, value: -1, to: Date()) ?? Date()
         self.customEndDate = Date()
     }
+
+    // Global
 
     var selectedRange: StatsRange {
         let now = Date()
@@ -44,6 +54,38 @@ class StatisticsViewModel {
         let range = selectedRange
         return "\(range.start.formatted(date: .abbreviated, time: .omitted)) - \(range.end.formatted(date: .abbreviated, time: .omitted))"
     }
+
+    func summary(from mediaList: [any Media]) -> GlobalStatsSummary {
+        let mediaInRange = mediaList.filter(isMediaInRange)
+        let watchedMedia = mediaInRange.filter(hasWatchedSession)
+        let sessions = mediaList.flatMap(filteredSessions)
+
+        let ratedMedia = mediaInRange.compactMap { media -> Double? in
+            media.interaction.note
+        }
+
+        let reviewCount = mediaInRange.filter { media in
+            media.interaction.note != nil || !(media.interaction.comment ?? "").isEmpty
+        }.count
+
+        let totalDuration = sessions.reduce(0) { partialResult, entry in
+            partialResult + durationForSession(media: entry.media, session: entry.session)
+        }
+
+        let filmCount = watchedMedia.filter { $0.mediaType == .film }.count
+        let serieCount = watchedMedia.filter { $0.mediaType == .serie }.count
+
+        return GlobalStatsSummary(
+            filmCount: filmCount,
+            serieCount: serieCount,
+            totalSessionsCount: sessions.count,
+            totalDuration: totalDuration,
+            averageRating: ratedMedia.isEmpty ? nil : ratedMedia.reduce(0, +) / Double(ratedMedia.count),
+            reviewCount: reviewCount
+        )
+    }
+
+    // Chart
 
     var chartConfiguration: ChartConfiguration {
         let range = selectedRange
@@ -78,36 +120,6 @@ class StatisticsViewModel {
         return ChartConfiguration(component: .month, bucketSize: monthBucketSize, targetBarCount: targetBars)
     }
 
-    func summary(from mediaList: [any Media]) -> GlobalStatsSummary {
-        let mediaInRange = mediaList.filter(isMediaInRange)
-        let watchedMedia = mediaInRange.filter(hasWatchedSession)
-        let sessions = mediaList.flatMap(filteredSessions)
-
-        let ratedMedia = mediaInRange.compactMap { media -> Double? in
-            media.interaction.note
-        }
-
-        let reviewCount = mediaInRange.filter { media in
-            media.interaction.note != nil || !(media.interaction.comment ?? "").isEmpty
-        }.count
-
-        let totalDuration = sessions.reduce(0) { partialResult, entry in
-            partialResult + durationForSession(media: entry.media, session: entry.session)
-        }
-
-        let filmCount = watchedMedia.filter { $0.mediaType == MediaType.film }.count
-        let serieCount = watchedMedia.filter { $0.mediaType == MediaType.serie }.count
-
-        return GlobalStatsSummary(
-            filmCount: filmCount,
-            serieCount: serieCount,
-            totalSessionsCount: sessions.count,
-            totalDuration: totalDuration,
-            averageRating: ratedMedia.isEmpty ? nil : ratedMedia.reduce(0, +) / Double(ratedMedia.count),
-            reviewCount: reviewCount
-        )
-    }
-
     func chartData(from mediaList: [any Media]) -> [ChartData] {
         let range = selectedRange
         let configuration = chartConfiguration
@@ -139,6 +151,70 @@ class StatisticsViewModel {
         }
     }
 
+    // Favorite
+
+    func recentMedia(from mediaList: [any Media]) -> [ProfileHistoryItem] {
+        mediaList
+            .filter { !$0.interaction.watchHistory.isEmpty }
+            .sorted { ($0.interaction.lastWatchedDate ?? .distantPast) > ($1.interaction.lastWatchedDate ?? .distantPast) }
+            .prefix(5)
+            .map { media in
+                ProfileHistoryItem(
+                    id: media.id,
+                    mediaID: media.id,
+                    title: media.title,
+                    subtitle: media.mediaType.rawValue,
+                    watchedDateText: media.interaction.lastWatchedDate?.formatted(.dateTime.day().month().year()) ?? "-",
+                    watchCountText: "\(media.interaction.watchHistory.count)x"
+                )
+            }
+    }
+
+    func rankedGenres(from mediaList: [any Media]) -> [(label: String, count: Int)] {
+        rankedValuesBySessions(from: mediaList) { media in
+            media.genres.map(\.rawValue)
+        }
+    }
+
+    func rankedPlatforms(from mediaList: [any Media]) -> [(label: String, count: Int)] {
+        rankedValuesBySessions(from: mediaList) { media in
+            media.platforms.map(\.rawValue)
+        }
+    }
+
+    func favoriteGenre(from mediaList: [any Media]) -> Genre? {
+        let counts = mediaList
+            .flatMap { media in
+                media.genres.map { ($0, media.interaction.watchHistory.filter { $0.status != .wishlist }.count) }
+            }
+            .reduce(into: [Genre: Int]()) { result, tuple in
+                result[tuple.0, default: 0] += tuple.1
+            }
+
+        return counts.max(by: { $0.value < $1.value })?.key
+    }
+
+    func favoritePlatform(from mediaList: [any Media]) -> Platform? {
+        let counts = mediaList
+            .flatMap { media in
+                media.platforms.map { ($0, media.interaction.watchHistory.filter { $0.status != .wishlist }.count) }
+            }
+            .reduce(into: [Platform: Int]()) { result, tuple in
+                result[tuple.0, default: 0] += tuple.1
+            }
+
+        return counts.max(by: { $0.value < $1.value })?.key
+    }
+
+    func favoriteFilm(from mediaList: [any Media]) -> Film? {
+        favoriteMedia(for: .film, from: mediaList) as? Film
+    }
+
+    func favoriteSerie(from mediaList: [any Media]) -> Serie? {
+        favoriteMedia(for: .serie, from: mediaList) as? Serie
+    }
+
+    // Private
 
     private func makeRange(from endDate: Date, component: Calendar.Component, value: Int) -> StatsRange {
         let end = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endDate) ?? endDate
@@ -175,6 +251,57 @@ class StatisticsViewModel {
         default:
             return media.displayDuration
         }
+    }
+
+    private func rankedValuesBySessions(
+        from mediaList: [any Media],
+        valueExtractor: (any Media) -> [String]
+    ) -> [(label: String, count: Int)] {
+        var counts: [String: Int] = [:]
+
+        for media in mediaList {
+            let sessionCount = media.interaction.watchHistory.filter { $0.status != .wishlist }.count
+            guard sessionCount > 0 else {
+                continue
+            }
+
+            for value in valueExtractor(media) {
+                counts[value, default: 0] += sessionCount
+            }
+        }
+
+        return counts
+            .map { (label: $0.key, count: $0.value) }
+            .sorted {
+                if $0.count == $1.count { return $0.label < $1.label }
+                return $0.count > $1.count
+            }
+            .prefix(3)
+            .map { $0 }
+    }
+
+    private func favoriteMedia(for type: MediaType, from mediaList: [any Media]) -> (any Media)? {
+        let candidates = mediaList.filter {
+            $0.mediaType == type && !$0.interaction.watchHistory.isEmpty
+        }
+        let explicitFavorites = candidates.filter { $0.interaction.isFavorite }
+
+        if let explicitFavorite = explicitFavorites.max(by: isWeakerFavoriteCandidate) {
+            return explicitFavorite
+        }
+
+        return candidates.max(by: isWeakerFavoriteCandidate)
+    }
+
+    private func isWeakerFavoriteCandidate(_ lhs: any Media, _ rhs: any Media) -> Bool {
+        favoriteScore(for: lhs) < favoriteScore(for: rhs)
+    }
+
+    private func favoriteScore(for media: any Media) -> Double {
+        let rating = media.interaction.note ?? 0
+        let watchCount = Double(media.interaction.watchHistory.filter { $0.status != .wishlist }.count)
+        let explicitBonus = media.interaction.isFavorite ? 1_000 : 0
+        return Double(explicitBonus) + (rating * 100) + (watchCount * 10)
     }
 
     private func preferredBarCount(for dayCount: Int) -> Int {

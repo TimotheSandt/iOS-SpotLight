@@ -8,7 +8,6 @@
 import Foundation
 import SwiftUI
 
-
 @Observable
 class MediaViewModel {
     
@@ -19,7 +18,6 @@ class MediaViewModel {
         self.media.append(contentsOf: Serie.testData)
     }
     
-    
     func addMedia(_ media: any Media) {
         self.media.append(media)
     }
@@ -27,94 +25,20 @@ class MediaViewModel {
     func media(withID id: UUID) -> (any Media)? {
         media.first { $0.id == id }
     }
-
-    
-    func recentMedia() -> [any Media] {
-        media
-            .filter { !$0.interaction.watchHistory.isEmpty }
-            .sorted { ($0.interaction.lastWatchedDate ?? .distantPast) > ($1.interaction.lastWatchedDate ?? .distantPast) }
-            .prefix(5)
-            .map { $0 }
-    }
-
-    
-    
-    // FAVORIS
-    func getFavoriteGenre() -> Genre? {
-        let genresCount = media
-            .flatMap { media in
-                media.genres.map { ($0, media.interaction.watchHistory.count) }
-            }
-            .reduce(into: [Genre: Int]()) { result, tuple in
-                result[tuple.0, default: 0] += tuple.1
-            }
-
-        return genresCount.max(by: { $0.value < $1.value })?.key
-    }
-
-    func getFavoritePlatforms() -> Platform? {
-        let platformsCount = media
-            .flatMap { media in
-                media.platforms.map { ($0, media.interaction.watchHistory.count) }
-            }
-            .reduce(into: [Platform: Int]()) { result, tuple in
-                result[tuple.0, default: 0] += tuple.1
-            }
-
-        return platformsCount.max(by: { $0.value < $1.value })?.key
-    }
-
-    func getFavoriteFilm() -> Film? {
-        // Favorie Explicite
-        if let explicitFavorite = media.first(where: { $0.interaction.isFavorite && $0 is Film }) as? Film {
-            return explicitFavorite
-        }
-        
-        let allFilms = media.compactMap { $0 as? Film }
-        return allFilms.sorted { lhs, rhs in
-            let noteLhs = lhs.interaction.note ?? 0
-            let noteRhs = rhs.interaction.note ?? 0
-            
-            if noteLhs != noteRhs {
-                return noteLhs > noteRhs
-            }
-            return lhs.interaction.watchHistory.count > rhs.interaction.watchHistory.count
-        }.first
-    }
-
-    func getFavoriteSerie() -> Serie? {
-        // Favorie Explicite
-        if let explicitFavorite = media.first(where: { $0.interaction.isFavorite && $0 is Serie }) as? Serie {
-            return explicitFavorite
-        }
-        
-        let allSeries = media.compactMap { $0 as? Serie }
-        return allSeries.sorted { lhs, rhs in
-            let noteLhs = lhs.interaction.note ?? 0
-            let noteRhs = rhs.interaction.note ?? 0
-            
-            if noteLhs != noteRhs {
-                return noteLhs > noteRhs
-            }
-            return lhs.interaction.watchHistory.count > rhs.interaction.watchHistory.count
-        }.first
-    }
-    
     
     // MODIFIERS
     func addFilm(title: String, creator: String, annee: Int, duration: Int, releaseYear: Int , pays: String, platform: Platform, genres: [Genre], status: Status, note: Double?, comment: String?, date: Date?) {
         var watchHistory: [WatchSession] = []
-        if (date != nil) {
+        if date != nil {
             watchHistory.append(WatchSession(date: date!, status: .watched))
         }
         
-        let interaction: MediaInteraction = MediaInteraction(
+        let interaction = MediaInteraction(
             status: status,
             note: note,
             comment: comment,
             watchHistory: watchHistory
         )
-        
         
         let newFilm = Film(
             title: title,
@@ -132,11 +56,11 @@ class MediaViewModel {
     
     func addSerie(title: String, creator: String, annee: Int, duration: Int, releaseYear: Int, pays: String, platform: Platform, genres: [Genre], seasons: [Season], status: Status, note: Double?, comment: String?, date: Date?) {
         var watchHistory: [WatchSession] = []
-        if (date != nil) {
+        if date != nil {
             watchHistory.append(WatchSession(date: date!, status: .watched))
         }
         
-        let interaction: MediaInteraction = MediaInteraction(
+        let interaction = MediaInteraction(
             status: status,
             note: note,
             comment: comment,
@@ -157,7 +81,6 @@ class MediaViewModel {
         self.media.append(newSerie)
     }
 
-    
     func deleteMedia(indexSet: IndexSet) {
         self.media.remove(atOffsets: indexSet)
     }
@@ -177,20 +100,25 @@ class MediaViewModel {
     }
 
     func toggleFavorite(for id: UUID) {
-        let selectedMedia = media.first { $0.id == id }
-        
-        // Si on veut mettre en favori, on retire l'ancien favori du même type
-        if let selected = selectedMedia, !selected.interaction.isFavorite {
+        guard let selectedMedia = media(withID: id) else {
+            return
+        }
+
+        if !selectedMedia.interaction.isFavorite {
             let sameTypeFavorites = media.filter {
-                $0.interaction.isFavorite && type(of: $0) == type(of: selected)
+                $0.interaction.isFavorite && $0.mediaType == selectedMedia.mediaType
             }
-            
-            for fav in sameTypeFavorites {
-                updateMedia(withID: fav.id) { $0.interaction.isFavorite = false }
+
+            for favorite in sameTypeFavorites {
+                updateMedia(withID: favorite.id) { media in
+                    media.interaction.isFavorite = false
+                }
             }
         }
-        
-        updateMedia(withID: id) { $0.interaction.isFavorite.toggle() }
+
+        updateMedia(withID: id) { media in
+            media.interaction.isFavorite.toggle()
+        }
     }
 
     private func updateMedia(withID id: UUID, mutate: (inout any Media) -> Void) {
