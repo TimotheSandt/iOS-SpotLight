@@ -2,7 +2,7 @@
 //  ProfileHistorySectionView.swift
 //  SpotLight
 //
-//  Created by Codex on 31/03/2026.
+//  Created by timothe sandt on 31/03/2026.
 //
 
 import SwiftUI
