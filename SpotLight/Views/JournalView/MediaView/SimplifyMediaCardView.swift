@@ -26,12 +26,6 @@ struct SimplifyMediaCardView: View {
                     .font(.title2)
                     .bold()
 
-                if media.interaction.isFavorite {
-                    Label("Favori", systemImage: "star.fill")
-                        .font(.caption.bold())
-                        .foregroundStyle(.yellow)
-                }
-
                 Text("\(media.creator) � \(String(media.releaseYear))")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -67,3 +61,4 @@ struct SimplifyMediaCardView: View {
 #Preview("Serie") {
     SimplifyMediaCardView(media: Serie.testData[0])
 }
+

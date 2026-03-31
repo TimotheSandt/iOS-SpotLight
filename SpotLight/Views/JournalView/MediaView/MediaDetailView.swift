@@ -25,21 +25,6 @@ struct MediaDetailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         SimplifyMediaCardView(media: media)
-                        // Button {
-                        //     data.toggleFavorite(for: mediaID)
-                        // } label: {
-                        //     Label(
-                        //         media.interaction.isFavorite ? "Retirer des favoris" : "Definir comme favori",
-                        //         systemImage: media.interaction.isFavorite ? "star.slash" : "star.fill"
-                        //     )
-                        //     .font(.subheadline.bold())
-                        //     .frame(maxWidth: .infinity)
-                        //     .padding()
-                        //     .background(media.interaction.isFavorite ? Color.yellow.opacity(0.2) : Color.blue.opacity(0.12))
-                        //     .foregroundStyle(media.interaction.isFavorite ? .yellow : .blue)
-                        //     .clipShape(RoundedRectangle(cornerRadius: 16))
-                        // }
-                        // .padding(.horizontal)
                         MediaDetailAvisView(mediaID: mediaID)
                         MediaDetailHistoriqueView(media: media, showAddInteraction: $showAddInteraction)
                     }
@@ -109,3 +94,4 @@ struct MediaDetailView: View {
     MediaDetailView(mediaID: Film.testData[1].id)
         .environment(MediaViewModel())
 }
+

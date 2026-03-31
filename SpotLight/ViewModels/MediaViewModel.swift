@@ -99,28 +99,6 @@ class MediaViewModel {
         }
     }
 
-    func toggleFavorite(for id: UUID) {
-        guard let selectedMedia = media(withID: id) else {
-            return
-        }
-
-        if !selectedMedia.interaction.isFavorite {
-            let sameTypeFavorites = media.filter {
-                $0.interaction.isFavorite && $0.mediaType == selectedMedia.mediaType
-            }
-
-            for favorite in sameTypeFavorites {
-                updateMedia(withID: favorite.id) { media in
-                    media.interaction.isFavorite = false
-                }
-            }
-        }
-
-        updateMedia(withID: id) { media in
-            media.interaction.isFavorite.toggle()
-        }
-    }
-
     private func updateMedia(withID id: UUID, mutate: (inout any Media) -> Void) {
         guard let index = media.firstIndex(where: { $0.id == id }) else {
             return
@@ -131,3 +109,4 @@ class MediaViewModel {
         media[index] = item
     }
 }
+

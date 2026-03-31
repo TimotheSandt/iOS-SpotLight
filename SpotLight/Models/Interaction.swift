@@ -25,7 +25,6 @@ struct MediaInteraction: Identifiable, Codable {
     var comment: String?
     
     var watchHistory: [WatchSession] = []
-    var isFavorite: Bool = false
     
     
     
@@ -58,3 +57,4 @@ struct MediaInteraction: Identifiable, Codable {
         watchHistory.map { $0.date }.max()
     }
 }
+

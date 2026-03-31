@@ -16,17 +16,9 @@ struct FavoriteMediaRowView: View {
         } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Text(media.title)
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-
-                        if media.interaction.isFavorite {
-                            Label("Favori", systemImage: "star.fill")
-                                .font(.caption.bold())
-                                .foregroundStyle(.yellow)
-                        }
-                    }
+                Text(media.title)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
 
                     Text("\(media.creator) • \(media.releaseYear)")
                         .font(.subheadline)
@@ -53,3 +45,4 @@ struct FavoriteMediaRowView: View {
         .buttonStyle(.plain)
     }
 }
+
