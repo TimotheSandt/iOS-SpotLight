@@ -8,10 +8,17 @@
 import SwiftUI
 
 
+private enum TypeChart: String, CaseIterable, Codable {
+    case genre = "Genre"
+    case platforme = "Plateform"
+}
+
 struct StatisticsView: View {
 
     @Environment(MediaViewModel.self) private var data
     @Environment(StatisticsViewModel.self) private var stats
+    
+    @State private var typeChart: TypeChart = .genre
 
     private var summary: GlobalStatsSummary {
         stats.summary(from: data.media)
@@ -83,19 +90,20 @@ struct StatisticsView: View {
                     
                     TimeChartView()
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Definition")
-                            .font(.headline)
-
-                        Text("Les stats de visionnage utilisent l'historique sur la periode selectionnee. Pour les avis et la note moyenne, la periode est basee sur la derniere activite du media.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    
+                    Picker("Select type chart", selection: $typeChart) {
+                        ForEach(TypeChart.allCases, id: \.self) { type in
+                            Text(type.rawValue).tag(type)
+                        }
                     }
+                    .pickerStyle(.segmented)
+                    
                     ScrollView(.horizontal){
                         LazyHStack(spacing: 16) {
-                            MediaPieChartView(title: "", data: stats.rankedGenres(from: data.media))
+                            
+                            MediaPieChartView(title: typeChart.rawValue, data: (typeChart == .genre) ? stats.rankedGenres(from: data.media) : stats.rankedPlatforms(from: data.media))
                                 .frame(width: 300, height: 300)
-                            MediaPieChartView(title: "", data: stats.rankedPlatforms(from: data.media))
+                            RatingChartView(title: typeChart.rawValue, data: (typeChart == .genre) ? stats.avgRatingGenres(from: data.media) : stats.avgRatingPlateform(from: data.media))
                                 .frame(width: 300, height: 300)
                         }
                     }

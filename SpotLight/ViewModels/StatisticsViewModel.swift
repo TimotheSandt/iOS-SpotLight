@@ -122,6 +122,51 @@ class StatisticsViewModel {
     }
 
     // --- CLASSEMENTS ET FAVORIS ---
+    func avgRatingGenres(from mediaList: [any Media]) -> [(label: String, rating: Double)] {
+        var totals: [String: (sum: Double, count: Int)] = [:]
+        
+        for media in mediaList {
+            if let note = media.interaction.note {
+                for genre in media.genres {
+                    let current = totals[genre.rawValue, default: (0.0, 0)]
+                    totals[genre.rawValue] = (
+                        sum: current.sum + note,
+                        count: current.count + 1
+                    )
+                }
+            }
+        }
+        
+        let results = totals.map { key, value in
+            let average = value.sum / Double(value.count)
+            return (label: key, rating: average)
+        }
+        return results.sorted { $0.rating > $1.rating }
+    }
+    
+    func avgRatingPlateform(from mediaList: [any Media]) -> [(label: String, rating: Double)] {
+        var totals: [String: (sum: Double, count: Int)] = [:]
+        
+        for media in mediaList {
+            if let note = media.interaction.note {
+                for plateform in media.platforms {
+                    let current = totals[plateform.rawValue, default: (0.0, 0)]
+                    totals[plateform.rawValue] = (
+                        sum: current.sum + note,
+                        count: current.count + 1
+                    )
+                }
+            }
+        }
+        
+        let results = totals.map { key, value in
+            let average = value.sum / Double(value.count)
+            return (label: key, rating: average)
+        }
+        return results.sorted { $0.rating > $1.rating }
+    }
+    
+    
     func rankedGenres(from mediaList: [any Media]) -> [(label: String, count: Int)] {
         var counts: [String: Int] = [:]
         for media in mediaList {

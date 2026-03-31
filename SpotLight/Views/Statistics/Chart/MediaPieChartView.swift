@@ -14,7 +14,7 @@ struct MediaPieChartView: View {
     
     var body: some View {
         VStack(alignment: .leading) {
-            Text(title)
+            Text("Nombre de vu par \(title)")
                 .font(.headline)
                 .padding(.bottom, 5)
             
