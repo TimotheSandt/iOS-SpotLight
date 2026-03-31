@@ -2,7 +2,7 @@
 //  StatisticsViewModel.swift
 //  SpotLight
 //
-//  Created by Codex on 30/03/2026.
+//  Created by timothe sandt on 30/03/2026.
 //
 
 import Foundation
