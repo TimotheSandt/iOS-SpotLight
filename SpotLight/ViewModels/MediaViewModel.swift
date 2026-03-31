@@ -28,6 +28,41 @@ class MediaViewModel {
         media.first { $0.id == id }
     }
 
+    
+    func recentMedia() -> [any Media] {
+        media
+            .filter { !$0.interaction.watchHistory.isEmpty }
+            .sorted { ($0.interaction.lastWatchedDate ?? .distantPast) > ($1.interaction.lastWatchedDate ?? .distantPast) }
+            .prefix(5)
+            .map { $0 }
+    }
+
+    func favoriteGenre(from mediaList: [any Media]) -> [(label: String, count: Int)] {
+        let genresCount = media
+            .flatMap { $0.genres }
+            .reduce(into: [:String: Int]()) { (result, genre) in
+                var count = result[genre, default: 0]
+                count += media.filter { $0.genres.contains(genre) }.compactMap { $0.interaction.watchHistory.count }.reduce(0, +)
+                result[genre] = count
+                return result
+            }
+        let favoriteGenre = genresCount.max { $0.value < $1.value }?.key
+        return [favoriteGenre]
+    }
+
+    func favoritePlatforms(from mediaList: [any Media]) -> [(label: String, count: Int)] {
+        let platformsCount = media
+            .flatMap { $0.platforms }
+            .reduce(into: [:String: Int]()) { (result, platform) in
+                var count = result[platform, default: 0]
+                count += media.filter { $0.platforms.contains(platform) }.compactMap { $0.interaction.watchHistory.count }.reduce(0, +)
+                result[platform] = count
+                return result
+            }
+        let favoritePlatform = platformsCount.max { $0.value < $1.value }?.key
+        return [favoritePlatform]
+    }
+
     func getFavoriteFilm() -> Film? {
         let favoriteFilm = media.first { $0.interaction.isFavorite && $0 is Film } ?? nil
         if let favoriteFilm {

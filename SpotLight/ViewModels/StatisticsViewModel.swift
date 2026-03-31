@@ -138,6 +138,34 @@ class StatisticsViewModel {
         }
     }
 
+    func rankedGenres(from mediaList: [any Media]) -> [(label: String, count: Int)] {
+        rankedValuesBySessions(from: mediaList) { media in
+            media.genres.map(\.rawValue)
+        }
+    }
+
+    func rankedPlatforms(from mediaList: [any Media]) -> [(label: String, count: Int)] {
+        rankedValuesBySessions(from: mediaList) { media in
+            media.platforms.map(\.rawValue)
+        }
+    }
+
+    func recentMedia(from mediaList: [any Media]) -> [any Media] {
+        mediaList
+            .filter { !$0.interaction.watchHistory.isEmpty }
+            .sorted { ($0.interaction.lastWatchedDate ?? .distantPast) > ($1.interaction.lastWatchedDate ?? .distantPast) }
+            .prefix(5)
+            .map { $0 }
+    }
+
+    func favoriteFilm(from mediaList: [any Media]) -> (any Media)? {
+        favoriteMedia(for: .film, from: mediaList)
+    }
+
+    func favoriteSerie(from mediaList: [any Media]) -> (any Media)? {
+        favoriteMedia(for: .serie, from: mediaList)
+    }
+
     private func makeRange(from endDate: Date, component: Calendar.Component, value: Int) -> StatsRange {
         let end = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endDate) ?? endDate
         let startBase = calendar.date(byAdding: component, value: value, to: end) ?? end
@@ -173,6 +201,57 @@ class StatisticsViewModel {
         default:
             return media.displayDuration
         }
+    }
+
+    private func rankedValuesBySessions(
+        from mediaList: [any Media],
+        valueExtractor: (any Media) -> [String]
+    ) -> [(label: String, count: Int)] {
+        var counts: [String: Int] = [:]
+
+        for media in mediaList {
+            let sessionCount = media.interaction.watchHistory.filter { $0.status != .wishlist }.count
+            guard sessionCount > 0 else {
+                continue
+            }
+
+            for value in valueExtractor(media) {
+                counts[value, default: 0] += sessionCount
+            }
+        }
+
+        return counts
+            .map { (label: $0.key, count: $0.value) }
+            .sorted {
+                if $0.count == $1.count { return $0.label < $1.label }
+                return $0.count > $1.count
+            }
+            .prefix(3)
+            .map { $0 }
+    }
+
+    private func favoriteMedia(for type: MediaType, from mediaList: [any Media]) -> (any Media)? {
+        let candidates = mediaList.filter {
+            $0.mediaType == type && !$0.interaction.watchHistory.isEmpty
+        }
+        let explicitFavorites = candidates.filter { $0.interaction.isFavorite }
+
+        if let explicit = explicitFavorites.max(by: isWeakerFavoriteCandidate) {
+            return explicit
+        }
+
+        return candidates.max(by: isWeakerFavoriteCandidate)
+    }
+
+    private func isWeakerFavoriteCandidate(_ lhs: any Media, _ rhs: any Media) -> Bool {
+        favoriteScore(for: lhs) < favoriteScore(for: rhs)
+    }
+
+    private func favoriteScore(for media: any Media) -> Double {
+        let rating = media.interaction.note ?? 0
+        let watchCount = Double(media.interaction.watchHistory.filter { $0.status != .wishlist }.count)
+        let explicitBonus = media.interaction.isFavorite ? 1_000 : 0
+        return Double(explicitBonus) + (rating * 100) + (watchCount * 10)
     }
 
     private func preferredBarCount(for dayCount: Int) -> Int {
