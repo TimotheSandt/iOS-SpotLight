@@ -37,31 +37,28 @@ class MediaViewModel {
             .map { $0 }
     }
 
-    func getFavoriteGenre() -> [(label: String, count: Int)] {
+    func getFavoriteGenre() -> Genre? {
         let genresCount = media
-            .flatMap { media in media.genres.map { ($0.rawValue, media.interaction.watchHistory.count) } }
-            .reduce(into: [String: Int]()) { result, tuple in
+            .flatMap { media in
+                media.genres.map { ($0, media.interaction.watchHistory.count) }
+            }
+            .reduce(into: [Genre: Int]()) { result, tuple in
                 result[tuple.0, default: 0] += tuple.1
             }
-        
-        // On retourne le top 1 (ou vide si rien)
-        if let favorite = genresCount.max(by: { $0.value < $1.value }) {
-            return [(label: favorite.key, count: favorite.value)]
-        }
-        return []
+
+        return genresCount.max(by: { $0.value < $1.value })?.key
     }
 
-    func getFavoritePlatforms() -> [(label: String, count: Int)] {
+    func getFavoritePlatforms() -> Platform? {
         let platformsCount = media
-            .flatMap { media in media.platforms.map { ($0.rawValue, media.interaction.watchHistory.count) } }
-            .reduce(into: [String: Int]()) { result, tuple in
+            .flatMap { media in
+                media.platforms.map { ($0, media.interaction.watchHistory.count) }
+            }
+            .reduce(into: [Platform: Int]()) { result, tuple in
                 result[tuple.0, default: 0] += tuple.1
             }
-        
-        if let favorite = platformsCount.max(by: { $0.value < $1.value }) {
-            return [(label: favorite.key, count: favorite.value)]
-        }
-        return []
+
+        return platformsCount.max(by: { $0.value < $1.value })?.key
     }
 
     func getFavoriteFilm() -> Film? {

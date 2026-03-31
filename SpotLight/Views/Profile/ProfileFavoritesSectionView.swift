@@ -23,8 +23,8 @@ struct ProfileFavoritesSectionView: View {
             LazyVGrid(columns: columns, spacing: 12) {
                 ProfileFavoriteMediaCardView(title: "Film favori", value: data.getFavoriteFilm()?.title ?? "N/A")
                 ProfileFavoriteMediaCardView(title: "Serie favorite", value: data.getFavoriteSerie()?.title ?? "N/A")
-                ProfileFavoriteMediaCardView(title: "Genre favori", value: data.getFavoriteGenre().first?.label ?? "N/A")
-                ProfileFavoriteMediaCardView(title: "Plateforme favorite", value: data.getFavoritePlatforms().first?.label ?? "N/A")
+                ProfileFavoriteMediaCardView(title: "Genre favori", value: data.getFavoriteGenre()?.rawValue ?? "N/A")
+                ProfileFavoriteMediaCardView(title: "Plateforme favorite", value: data.getFavoritePlatforms()?.rawValue ?? "N/A")
             }
         }
         .padding()
