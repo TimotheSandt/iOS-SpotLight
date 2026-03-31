@@ -37,6 +37,9 @@ class MediaViewModel {
             .map { $0 }
     }
 
+    
+    
+    // FAVORIS
     func getFavoriteGenre() -> Genre? {
         let genresCount = media
             .flatMap { media in
@@ -62,15 +65,12 @@ class MediaViewModel {
     }
 
     func getFavoriteFilm() -> Film? {
-        // 1. On cherche d'abord s'il y a un favori explicite
+        // Favorie Explicite
         if let explicitFavorite = media.first(where: { $0.interaction.isFavorite && $0 is Film }) as? Film {
             return explicitFavorite
         }
         
-        // 2. Sinon, on filtre tous les films pour trouver le meilleur
         let allFilms = media.compactMap { $0 as? Film }
-        
-        // 3. On trie par note, puis par nombre de visionnages
         return allFilms.sorted { lhs, rhs in
             let noteLhs = lhs.interaction.note ?? 0
             let noteRhs = rhs.interaction.note ?? 0
@@ -83,15 +83,12 @@ class MediaViewModel {
     }
 
     func getFavoriteSerie() -> Serie? {
-        // 1. On cherche d'abord s'il y a un favori explicite
+        // Favorie Explicite
         if let explicitFavorite = media.first(where: { $0.interaction.isFavorite && $0 is Serie }) as? Serie {
             return explicitFavorite
         }
         
-        // 2. Sinon, on filtre toutes les séries
         let allSeries = media.compactMap { $0 as? Serie }
-        
-        // 3. Tri identique
         return allSeries.sorted { lhs, rhs in
             let noteLhs = lhs.interaction.note ?? 0
             let noteRhs = rhs.interaction.note ?? 0
@@ -103,6 +100,8 @@ class MediaViewModel {
         }.first
     }
     
+    
+    // MODIFIERS
     func addFilm(title: String, creator: String, annee: Int, duration: Int, releaseYear: Int , pays: String, platform: Platform, genres: [Genre], status: Status, note: Double?, comment: String?, date: Date?) {
         var watchHistory: [WatchSession] = []
         if (date != nil) {

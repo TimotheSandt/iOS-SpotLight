@@ -7,14 +7,6 @@
 
 import Foundation
 
-struct ProfileHistoryItem: Identifiable {
-    let id: UUID
-    let mediaID: UUID
-    let title: String
-    let subtitle: String
-    let watchedDateText: String
-    let watchCountText: String
-}
 
 @Observable
 class StatisticsViewModel {
@@ -147,42 +139,6 @@ class StatisticsViewModel {
         }
     }
 
-    func rankedGenres(from mediaList: [any Media]) -> [(label: String, count: Int)] {
-        rankedValuesBySessions(from: mediaList) { media in
-            media.genres.map(\.rawValue)
-        }
-    }
-
-    func rankedPlatforms(from mediaList: [any Media]) -> [(label: String, count: Int)] {
-        rankedValuesBySessions(from: mediaList) { media in
-            media.platforms.map(\.rawValue)
-        }
-    }
-
-    func recentMedia(from mediaList: [any Media]) -> [ProfileHistoryItem] {
-        mediaList
-            .filter { !$0.interaction.watchHistory.isEmpty }
-            .sorted { ($0.interaction.lastWatchedDate ?? .distantPast) > ($1.interaction.lastWatchedDate ?? .distantPast) }
-            .prefix(5)
-            .map { media in
-                ProfileHistoryItem(
-                    id: media.id,
-                    mediaID: media.id,
-                    title: media.title,
-                    subtitle: media.mediaType.rawValue,
-                    watchedDateText: media.interaction.lastWatchedDate?.formatted(.dateTime.day().month().year()) ?? "-",
-                    watchCountText: "\(media.interaction.watchHistory.count)x"
-                )
-            }
-    }
-
-    func favoriteFilmTitle(from mediaList: [any Media]) -> String? {
-        favoriteMedia(for: .film, from: mediaList)?.title
-    }
-
-    func favoriteSerieTitle(from mediaList: [any Media]) -> String? {
-        favoriteMedia(for: .serie, from: mediaList)?.title
-    }
 
     private func makeRange(from endDate: Date, component: Calendar.Component, value: Int) -> StatsRange {
         let end = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endDate) ?? endDate
@@ -219,57 +175,6 @@ class StatisticsViewModel {
         default:
             return media.displayDuration
         }
-    }
-
-    private func rankedValuesBySessions(
-        from mediaList: [any Media],
-        valueExtractor: (any Media) -> [String]
-    ) -> [(label: String, count: Int)] {
-        var counts: [String: Int] = [:]
-
-        for media in mediaList {
-            let sessionCount = media.interaction.watchHistory.filter { $0.status != .wishlist }.count
-            guard sessionCount > 0 else {
-                continue
-            }
-
-            for value in valueExtractor(media) {
-                counts[value, default: 0] += sessionCount
-            }
-        }
-
-        return counts
-            .map { (label: $0.key, count: $0.value) }
-            .sorted {
-                if $0.count == $1.count { return $0.label < $1.label }
-                return $0.count > $1.count
-            }
-            .prefix(3)
-            .map { $0 }
-    }
-
-    private func favoriteMedia(for type: MediaType, from mediaList: [any Media]) -> (any Media)? {
-        let candidates = mediaList.filter {
-            $0.mediaType == type && !$0.interaction.watchHistory.isEmpty
-        }
-        let explicitFavorites = candidates.filter { $0.interaction.isFavorite }
-
-        if let explicit = explicitFavorites.max(by: isWeakerFavoriteCandidate) {
-            return explicit
-        }
-
-        return candidates.max(by: isWeakerFavoriteCandidate)
-    }
-
-    private func isWeakerFavoriteCandidate(_ lhs: any Media, _ rhs: any Media) -> Bool {
-        favoriteScore(for: lhs) < favoriteScore(for: rhs)
-    }
-
-    private func favoriteScore(for media: any Media) -> Double {
-        let rating = media.interaction.note ?? 0
-        let watchCount = Double(media.interaction.watchHistory.filter { $0.status != .wishlist }.count)
-        let explicitBonus = media.interaction.isFavorite ? 1_000 : 0
-        return Double(explicitBonus) + (rating * 100) + (watchCount * 10)
     }
 
     private func preferredBarCount(for dayCount: Int) -> Int {

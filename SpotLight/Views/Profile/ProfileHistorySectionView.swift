@@ -11,23 +11,19 @@ struct ProfileHistorySectionView: View {
     @Environment(MediaViewModel.self) private var data
     @Environment(StatisticsViewModel.self) private var stats
 
-    private var recentMedia: [ProfileHistoryItem] {
-        stats.recentMedia(from: data.media)
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Derniers visionnages")
                 .font(.headline)
 
-            if recentMedia.isEmpty {
+            if data.recentMedia().isEmpty {
                 Text("Aucun visionnage pour le moment.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(recentMedia) { item in
+                ForEach(data.recentMedia(), id: \.id) { item in
                     NavigationLink {
-                        MediaDetailView(mediaID: item.mediaID)
+                        MediaDetailView(mediaID: item.id)
                     } label: {
                         ProfileHistoryRowView(item: item)
                     }
