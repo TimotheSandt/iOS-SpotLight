@@ -9,11 +9,10 @@ import Foundation
 
 @Observable
 class StatisticsViewModel {
-
+    // --- PROPRIÉTÉS ---
     var selectedPeriod: StatsPeriod = .month
     var customStartDate: Date
     var customEndDate: Date
-
     private let calendar: Calendar
 
     init(calendar: Calendar = .current) {
@@ -22,315 +21,188 @@ class StatisticsViewModel {
         self.customEndDate = Date()
     }
 
-    // Global
+    // --- CALCUL DE LA PÉRIODE (Plage de dates) ---
     var selectedRange: StatsRange {
         let now = Date()
         let endOfToday = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: customEndDate) ?? customEndDate
 
         switch selectedPeriod {
-        case .week:
-            return makeRange(from: now, component: .day, value: -7)
-        case .month:
-            return makeRange(from: now, component: .month, value: -1)
-        case .year:
-            return makeRange(from: now, component: .year, value: -1)
+        case .week:  return makeRange(from: now, component: .day, value: -7)
+        case .month: return makeRange(from: now, component: .month, value: -1)
+        case .year:  return makeRange(from: now, component: .year, value: -1)
         case .custom:
             let start = calendar.startOfDay(for: min(customStartDate, customEndDate))
             return StatsRange(start: start, end: endOfToday)
         }
     }
-
+    
     var rangeLabel: String {
         let range = selectedRange
-        return "\(range.start.formatted(date: .abbreviated, time: .omitted)) - \(range.end.formatted(date: .abbreviated, time: .omitted))"
+        let startStr = range.start.formatted(date: .abbreviated, time: .omitted)
+        let endStr = range.end.formatted(date: .abbreviated, time: .omitted)
+        
+        return "\(startStr) - \(endStr)"
     }
 
+    // --- RÉSUMÉ GLOBAL ---
     func summary(from mediaList: [any Media]) -> GlobalStatsSummary {
-        let mediaInRange = mediaList.filter(isMediaInRange)
-        let watchedMedia = mediaInRange.filter(hasWatchedSession)
-        let sessions = mediaList.flatMap(filteredSessions)
+        let range = selectedRange
+        var filmCount = 0
+        var serieCount = 0
+        var totalDuration = 0
+        var sessionCount = 0
+        var ratings: [Double] = []
+        var reviewCount = 0
 
-        let ratedMedia = mediaInRange.compactMap { media -> Double? in
-            media.interaction.note
+        for media in mediaList {
+            // On récupère les sessions qui sont dans la bonne date
+            let sessionsInRange = media.interaction.watchHistory.filter {
+                range.contains($0.date) && $0.status != .wishlist
+            }
+
+            if !sessionsInRange.isEmpty {
+                // Type de média
+                if media.mediaType == .film { filmCount += 1 } else { serieCount += 1 }
+                
+                // Sessions et Temps
+                sessionCount += sessionsInRange.count
+                totalDuration += sessionsInRange.count * media.displayDuration
+                
+                // Notes et Avis
+                if let note = media.interaction.note { ratings.append(note) }
+                if media.interaction.note != nil || !(media.interaction.comment ?? "").isEmpty {
+                    reviewCount += 1
+                }
+            }
         }
-
-        let reviewCount = mediaInRange.filter { media in
-            media.interaction.note != nil || !(media.interaction.comment ?? "").isEmpty
-        }.count
-
-        let totalDuration = sessions.reduce(0) { partialResult, entry in
-            partialResult + durationForSession(media: entry.media, session: entry.session)
-        }
-
-        let filmCount = watchedMedia.filter { $0.mediaType == .film }.count
-        let serieCount = watchedMedia.filter { $0.mediaType == .serie }.count
 
         return GlobalStatsSummary(
             filmCount: filmCount,
             serieCount: serieCount,
-            totalSessionsCount: sessions.count,
+            totalSessionsCount: sessionCount,
             totalDuration: totalDuration,
-            averageRating: ratedMedia.isEmpty ? nil : ratedMedia.reduce(0, +) / Double(ratedMedia.count),
+            averageRating: ratings.isEmpty ? nil : ratings.reduce(0, +) / Double(ratings.count),
             reviewCount: reviewCount
         )
     }
 
-    // Chart
-
+    // --- DONNÉES DU GRAPHIQUE (La partie technique) ---
     var strideUnit: (component: Calendar.Component, value: Int) {
-        let dayCount = max(
-            calendar.dateComponents(
-                [.day],
-                from: calendar.startOfDay(for: selectedRange.start),
-                to: calendar.startOfDay(for: selectedRange.end)
-            ).day ?? 0,
-            0
-        ) + 1
-
+        let dayCount = calendar.dateComponents([.day], from: selectedRange.start, to: selectedRange.end).day ?? 0
+        
         switch selectedPeriod {
-        case .week:
-            return (.day, 1)
-        case .month:
-            return (.day, max(Int(ceil(Double(dayCount) / 10.0)), 1))
-        case .year:
-            return (.month, 1)
+        case .week:  return (.day, 1)
+        case .month: return (.day, max(dayCount / 10, 1))
+        case .year:  return (.month, 1)
         case .custom:
             if dayCount <= 7 { return (.day, 1) }
-            if dayCount <= 31 { return (.day, max(Int(ceil(Double(dayCount) / 10.0)), 1)) }
-            if dayCount <= 180 { return (.day, max(Int(ceil(Double(dayCount) / 16.0)), 1)) }
-            if dayCount <= 365 { return (.month, 1) }
-            return (.month, 2)
+            if dayCount <= 31 { return (.day, max(dayCount / 10, 1)) }
+            return (.month, 1)
         }
     }
 
     func chartData(from mediaList: [any Media]) -> [ChartData] {
         let range = selectedRange
         let unit = strideUnit
+        var groupedDurations: [Date: Int] = [:]
 
-        let sessions = mediaList.flatMap { media in
-            media.interaction.watchHistory.compactMap { session -> (date: Date, duration: Int)? in
-                let duration = durationForSession(media: media, session: session)
-                guard range.contains(session.date), duration > 0 else {
-                    return nil
+        for media in mediaList {
+            for session in media.interaction.watchHistory {
+                let duration = (session.status != .wishlist) ? media.displayDuration : 0
+                if range.contains(session.date) && duration > 0 {
+                    let bucket = bucketDate(for: session.date, in: range, unit: unit)
+                    groupedDurations[bucket, default: 0] += duration
                 }
-                return (session.date, duration)
             }
-        }
-
-        let groupedDurations = Dictionary(grouping: sessions) { session in
-            bucketDate(for: session.date, in: range, unit: unit)
-        }
-        .mapValues { bucketSessions in
-            bucketSessions.reduce(0) { $0 + $1.duration }
         }
 
         return chartDates(in: range, unit: unit).map { date in
-            ChartData(
-                date: date,
-                duration: groupedDurations[date, default: 0]
-            )
+            ChartData(date: date, duration: groupedDurations[date, default: 0])
         }
     }
 
-    // Favorite
-
-    func recentMedia(from mediaList: [any Media]) -> [(media: any Media, session: WatchSession)] {
-        mediaList
-            .flatMap { media in
-                media.interaction.watchHistory.compactMap { session -> (media: any Media, session: WatchSession)? in
-                    guard session.status != .wishlist else {
-                        return nil
-                    }
-
-                    return (media: media, session: session)
-                }
-            }
-            .sorted { $0.session.date > $1.session.date }
-            .prefix(5)
-            .map { $0 }
-    }
-
+    // --- CLASSEMENTS ET FAVORIS ---
     func rankedGenres(from mediaList: [any Media]) -> [(label: String, count: Int)] {
-        let counts = mediaList.reduce(into: [String: Int]()) { result, media in
-            let sessionCount = media.interaction.watchHistory.filter { $0.status != .wishlist }.count
-            guard sessionCount > 0 else {
-                return
-            }
-
-            for genre in media.genres {
-                result[genre.rawValue, default: 0] += sessionCount
+        var counts: [String: Int] = [:]
+        for media in mediaList {
+            let viewCount = media.interaction.watchHistory.filter { $0.status != .wishlist }.count
+            for genre in media.genres where viewCount > 0 {
+                counts[genre.rawValue, default: 0] += viewCount
             }
         }
-
-        return counts
-            .map { (label: $0.key, count: $0.value) }
-            .sorted {
-                if $0.count == $1.count { return $0.label < $1.label }
-                return $0.count > $1.count
-            }
-            .map { $0 }
+        return counts.map { (label: $0.key, count: $0.value) }.sorted { $0.count > $1.count }
     }
 
     func rankedPlatforms(from mediaList: [any Media]) -> [(label: String, count: Int)] {
-        let counts = mediaList.reduce(into: [String: Int]()) { result, media in
-            let sessionCount = media.interaction.watchHistory.filter { $0.status != .wishlist }.count
-            guard sessionCount > 0 else {
-                return
-            }
-
-            for platform in media.platforms {
-                result[platform.rawValue, default: 0] += sessionCount
+        var counts: [String: Int] = [:]
+        for media in mediaList {
+            let viewCount = media.interaction.watchHistory.filter { $0.status != .wishlist }.count
+            for plat in media.platforms where viewCount > 0 {
+                counts[plat.rawValue, default: 0] += viewCount
             }
         }
-
-        return counts
-            .map { (label: $0.key, count: $0.value) }
-            .sorted {
-                if $0.count == $1.count { return $0.label < $1.label }
-                return $0.count > $1.count
-            }
-            .map { $0 }
+        return counts.map { (label: $0.key, count: $0.value) }.sorted { $0.count > $1.count }
     }
 
     func favoriteGenre(from mediaList: [any Media]) -> Genre? {
-        let counts = mediaList
-            .flatMap { media in
-                media.genres.map { ($0, media.interaction.watchHistory.filter { $0.status != .wishlist }.count) }
-            }
-            .reduce(into: [Genre: Int]()) { result, tuple in
-                result[tuple.0, default: 0] += tuple.1
-            }
-
-        return counts.max(by: { $0.value < $1.value })?.key
+        if let top = rankedGenres(from: mediaList).first { return Genre(rawValue: top.label) }
+        return nil
     }
 
     func favoritePlatform(from mediaList: [any Media]) -> Platform? {
-        let counts = mediaList
-            .flatMap { media in
-                media.platforms.map { ($0, media.interaction.watchHistory.filter { $0.status != .wishlist }.count) }
-            }
-            .reduce(into: [Platform: Int]()) { result, tuple in
-                result[tuple.0, default: 0] += tuple.1
-            }
-
-        return counts.max(by: { $0.value < $1.value })?.key
+        if let top = rankedPlatforms(from: mediaList).first { return Platform(rawValue: top.label) }
+        return nil
     }
 
     func favoriteFilm(from mediaList: [any Media]) -> Film? {
-        mediaList
-            .compactMap { $0 as? Film }
+        return mediaList.compactMap { $0 as? Film }
             .filter { !$0.interaction.watchHistory.isEmpty }
-            .sorted {
-                let leftRating = $0.interaction.note ?? 0
-                let rightRating = $1.interaction.note ?? 0
-
-                if leftRating == rightRating {
-                    return $0.interaction.watchHistory.count > $1.interaction.watchHistory.count
-                }
-
-                return leftRating > rightRating
-            }
+            .sorted { ($0.interaction.note ?? 0, $0.interaction.watchHistory.count) > ($1.interaction.note ?? 0, $1.interaction.watchHistory.count) }
             .first
     }
 
     func favoriteSerie(from mediaList: [any Media]) -> Serie? {
-        mediaList
-            .compactMap { $0 as? Serie }
+        return mediaList.compactMap { $0 as? Serie }
             .filter { !$0.interaction.watchHistory.isEmpty }
-            .sorted {
-                let leftRating = $0.interaction.note ?? 0
-                let rightRating = $1.interaction.note ?? 0
-
-                if leftRating == rightRating {
-                    return $0.interaction.watchHistory.count > $1.interaction.watchHistory.count
-                }
-
-                return leftRating > rightRating
-            }
+            .sorted { ($0.interaction.note ?? 0, $0.interaction.watchHistory.count) > ($1.interaction.note ?? 0, $1.interaction.watchHistory.count) }
             .first
     }
 
-    // Private
-
-    private func makeRange(from endDate: Date, component: Calendar.Component, value: Int) -> StatsRange {
-        let end = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endDate) ?? endDate
-        let startBase = calendar.date(byAdding: component, value: value, to: end) ?? end
-        return StatsRange(start: calendar.startOfDay(for: startBase), end: end)
-    }
-
-    private func isMediaInRange(_ media: any Media) -> Bool {
-        guard let lastDate = media.interaction.lastWatchedDate else {
-            return false
-        }
-        return selectedRange.contains(lastDate)
-    }
-
-    private func hasWatchedSession(_ media: any Media) -> Bool {
-        media.interaction.watchHistory.contains { session in
-            session.status != .wishlist && selectedRange.contains(session.date)
-        }
-    }
-
-    private func filteredSessions(for media: any Media) -> [(media: any Media, session: WatchSession)] {
-        media.interaction.watchHistory.compactMap { session in
-            guard selectedRange.contains(session.date) else {
-                return nil
+    func recentMedia(from mediaList: [any Media]) -> [(media: any Media, session: WatchSession)] {
+        var results: [(media: any Media, session: WatchSession)] = []
+        for media in mediaList {
+            for session in media.interaction.watchHistory where session.status != .wishlist {
+                results.append((media, session))
             }
-            return (media: media, session: session)
+        }
+        return results.sorted { $0.session.date > $1.session.date }.prefix(5).map { $0 }
+    }
+
+    // --- OUTILS PRIVÉS (CALCULS DE DATES) ---
+    private func makeRange(from end: Date, component: Calendar.Component, value: Int) -> StatsRange {
+        let e = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: end) ?? end
+        let s = calendar.date(byAdding: component, value: value, to: e) ?? e
+        return StatsRange(start: calendar.startOfDay(for: s), end: e)
+    }
+
+    private func bucketDate(for date: Date, in range: StatsRange, unit: (component: Calendar.Component, value: Int)) -> Date {
+        if unit.component == .day {
+            let offset = calendar.dateComponents([.day], from: range.start, to: date).day ?? 0
+            let bucketOffset = (offset / unit.value) * unit.value
+            return calendar.date(byAdding: .day, value: bucketOffset, to: calendar.startOfDay(for: range.start)) ?? date
+        } else {
+            let components = calendar.dateComponents([.year, .month], from: date)
+            return calendar.date(from: components) ?? date
         }
     }
 
-    private func durationForSession(media: any Media, session: WatchSession) -> Int {
-        switch session.status {
-        case .wishlist:
-            return 0
-        default:
-            return media.displayDuration
-        }
-    }
-
-    private func chartDates(
-        in range: StatsRange,
-        unit: (component: Calendar.Component, value: Int)
-    ) -> [Date] {
+    private func chartDates(in range: StatsRange, unit: (component: Calendar.Component, value: Int)) -> [Date] {
         var dates: [Date] = []
         var current = bucketDate(for: range.start, in: range, unit: unit)
-
         while current <= range.end {
             dates.append(current)
-            guard let next = calendar.date(byAdding: unit.component, value: unit.value, to: current) else {
-                break
-            }
-            current = next
+            current = calendar.date(byAdding: unit.component, value: unit.value, to: current) ?? Date.distantFuture
         }
-
         return dates
-    }
-
-    private func bucketDate(
-        for date: Date,
-        in range: StatsRange,
-        unit: (component: Calendar.Component, value: Int)
-    ) -> Date {
-        switch unit.component {
-        case .day:
-            let baseStart = calendar.startOfDay(for: range.start)
-            let currentDay = calendar.startOfDay(for: date)
-            let offset = calendar.dateComponents([.day], from: baseStart, to: currentDay).day ?? 0
-            let bucketOffset = (offset / unit.value) * unit.value
-            return calendar.date(byAdding: .day, value: bucketOffset, to: baseStart) ?? currentDay
-        case .month:
-            let baseMonth = startOfMonth(for: range.start)
-            let currentMonth = startOfMonth(for: date)
-            let offset = calendar.dateComponents([.month], from: baseMonth, to: currentMonth).month ?? 0
-            let bucketOffset = (offset / unit.value) * unit.value
-            return calendar.date(byAdding: .month, value: bucketOffset, to: baseMonth) ?? currentMonth
-        default:
-            return date
-        }
-    }
-
-    private func startOfMonth(for date: Date) -> Date {
-        calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? calendar.startOfDay(for: date)
     }
 }
