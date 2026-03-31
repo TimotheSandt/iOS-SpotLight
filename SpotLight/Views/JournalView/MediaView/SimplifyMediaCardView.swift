@@ -33,7 +33,7 @@ struct SimplifyMediaCardView: View {
                         .foregroundStyle(.yellow)
                 }
 
-                Text("\(media.creator) • \(String(media.releaseYear))")
+                Text("\(media.creator) â€¢ \(String(media.releaseYear))")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
