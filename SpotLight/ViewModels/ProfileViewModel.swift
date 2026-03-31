@@ -16,4 +16,22 @@ class ProfileViewModel {
     var fullName: String {
         "\(firstName) \(lastName)".trimmingCharacters(in: .whitespacesAndNewlines)
     }
+
+    func updateFirstName(_ firstName: String) {
+        self.firstName = firstName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func updateLastName(_ lastName: String) {
+        self.lastName = lastName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func updateAge(_ age: Int) {
+        self.age = max(1, min(age, 120))
+    }
+
+    func updateProfile(firstName: String, lastName: String, age: Int) {
+        updateFirstName(firstName)
+        updateLastName(lastName)
+        updateAge(age)
+    }
 }
