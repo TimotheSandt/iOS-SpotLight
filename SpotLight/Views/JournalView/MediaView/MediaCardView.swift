@@ -15,10 +15,7 @@ struct MediaCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             
-            // Illustration + Informations superposées
             ZStack(alignment: .bottomLeading) {
-                
-                // Fond de l'illustration
                 RoundedRectangle(cornerRadius: 20)
                     .fill(.ultraThinMaterial)
                     .overlay {
@@ -27,13 +24,11 @@ struct MediaCardView: View {
                             .foregroundStyle(.secondary)
                     }
                 
-                // 2. Dégradé de protection pour le texte
                 LinearGradient(gradient: Gradient(colors: [.black.opacity(0.6), .clear]),
                                startPoint: .bottom,
                                endPoint: .center)
                     .cornerRadius(20)
 
-                // Main information (titre, créateur, date)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(media.title)
                         .font(.headline)
@@ -50,7 +45,6 @@ struct MediaCardView: View {
                 
             }
             .overlay(alignment: .topLeading) {
-                // Film ou Serie
                 Text(media is Serie ? "Serie" : "Film")
                     .font(.caption2)
                     .bold()
@@ -63,7 +57,6 @@ struct MediaCardView: View {
             }
             .frame(height: 180)
             .overlay(alignment: .topTrailing) {
-                // Statut et Date à droite
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(media.interaction.status.rawValue).font(.caption2)
                         .bold()

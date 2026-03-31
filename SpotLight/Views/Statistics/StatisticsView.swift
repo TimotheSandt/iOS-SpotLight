@@ -91,6 +91,10 @@ struct StatisticsView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                    
+                    MediaPieChartView(title: "", data: stats.rankedGenres(from: data.media))
+                    MediaPieChartView(title: "", data: stats.rankedPlatforms(from: data.media))
+                    // TODO: more graph
                 }
                 .padding()
                 

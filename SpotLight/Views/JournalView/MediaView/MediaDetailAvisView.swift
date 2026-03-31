@@ -12,7 +12,6 @@ struct MediaDetailAvisView: View {
     let mediaID: UUID
     @State private var isEditing: Bool = false
     
-    // États temporaires pour l'édition
     @State private var tempNote: String = ""
     @State private var tempComment: String = ""
     
@@ -34,8 +33,7 @@ struct MediaDetailAvisView: View {
                             .font(.headline)
                         Spacer()
                         
-                        // Bouton Edit (visible si pas en wishlist)
-                        if media.interaction.status != .wishlist {
+                        if media.interaction.status != .wishlist { // Edit les note que si a été vu
                             Button(hasAvis ? "Modifier" : "Ajouter") {
                                 tempNote = media.interaction.note != nil ? String(Int(media.interaction.note!)) : "0"
                                 tempComment = media.interaction.comment ?? ""
@@ -47,7 +45,6 @@ struct MediaDetailAvisView: View {
 
                     if hasAvis {
                         VStack(alignment: .leading, spacing: 10) {
-                            // Affichage de la note si elle existe
                             if let note = media.interaction.note {
                                 HStack(spacing: 4) {
                                     ForEach(1...5, id: \.self) { index in
@@ -59,7 +56,6 @@ struct MediaDetailAvisView: View {
                                 }
                             }
                             
-                            // Affichage du commentaire s'il existe
                             if let comment = media.interaction.comment, !comment.isEmpty {
                                 Text(comment)
                                     .font(.callout)

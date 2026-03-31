@@ -35,7 +35,6 @@ struct AddMediaView: View {
                 .ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 20) {
-                    // Sélecteur de type (Film/Série)
                     Picker("Select media type", selection: $mediaType) {
                         ForEach(MediaType.allCases, id: \.self) { type in
                             Text(type.rawValue).tag(type)
@@ -43,7 +42,6 @@ struct AddMediaView: View {
                     }
                     .pickerStyle(.segmented)
                     
-                    // 2. Le bloc "Section Media"
                     AddSectionMediaView(
                         title: $title,
                         mediaType: $mediaType,
@@ -55,7 +53,6 @@ struct AddMediaView: View {
                         selectedGenres: $selectedGenres
                     )
                     
-                    // 3. Le bloc "Section Suivi"
                     AddSectionSuiviView(
                         note: $note,
                         commentaire: $commentaire,
@@ -65,7 +62,6 @@ struct AddMediaView: View {
                     
                     Spacer()
                     
-                    // Bouton de sauvegarde
                     Button {
                         let d: Date? = (status == .wishlist) ? nil : date
                         let n: Double? = (status == .wishlist) ? nil : Double(note)

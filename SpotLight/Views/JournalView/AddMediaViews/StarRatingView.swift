@@ -11,7 +11,6 @@ struct StarRatingView: View {
     @Binding var rating: String
     var maxRating = 5
     
-    // État local pour l'animation de rebond
     @State private var tappedStar: Int? = nil
 
     private var currentRating: Int {
@@ -24,7 +23,6 @@ struct StarRatingView: View {
                 Image(systemName: index <= currentRating ? "star.fill" : "star")
                     .foregroundStyle(index <= currentRating ? .yellow : .gray.opacity(0.4))
                     .font(.title2)
-                    // Effet de rebond : s'agrandit si c'est l'étoile cliquée
                     .scaleEffect(tappedStar == index ? 1.5 : 1.0)
                     .onTapGesture {
                         updateRating(index)
