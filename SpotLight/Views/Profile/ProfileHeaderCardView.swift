@@ -10,9 +10,28 @@ import SwiftUI
 struct ProfileHeaderCardView: View {
     @Environment(ProfileViewModel.self) private var profile
 
-    var body: some View {
-        @Bindable var profile = profile
+    private var firstNameBinding: Binding<String> {
+        Binding(
+            get: { profile.firstName },
+            set: { profile.firstName = $0 }
+        )
+    }
 
+    private var lastNameBinding: Binding<String> {
+        Binding(
+            get: { profile.lastName },
+            set: { profile.lastName = $0 }
+        )
+    }
+
+    private var ageBinding: Binding<Int> {
+        Binding(
+            get: { profile.age },
+            set: { profile.age = $0 }
+        )
+    }
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 16) {
                 ZStack {
@@ -42,13 +61,13 @@ struct ProfileHeaderCardView: View {
             }
 
             VStack(spacing: 12) {
-                TextField("Prenom", text: $profile.firstName)
+                TextField("Prenom", text: firstNameBinding)
                     .textFieldStyle(.roundedBorder)
 
-                TextField("Nom", text: $profile.lastName)
+                TextField("Nom", text: lastNameBinding)
                     .textFieldStyle(.roundedBorder)
 
-                Stepper(value: $profile.age, in: 1...120) {
+                Stepper(value: ageBinding, in: 1...120) {
                     Text("Age: \(profile.age) ans")
                 }
             }

@@ -11,9 +11,11 @@ struct ProfileHistorySectionView: View {
     @Environment(MediaViewModel.self) private var data
     @Environment(StatisticsViewModel.self) private var stats
 
-    var body: some View {
-        let recentMedia = stats.recentMedia(from: data.media)
+    private var recentMedia: [any Media] {
+        stats.recentMedia(from: data.media)
+    }
 
+    var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Derniers visionnages")
                 .font(.headline)

@@ -16,14 +16,31 @@ struct ProfileFavoritesSectionView: View {
         GridItem(.flexible(), spacing: 12)
     ]
 
-    var body: some View {
-        let rankedGenres = stats.rankedGenres(from: data.media)
-        let rankedPlatforms = stats.rankedPlatforms(from: data.media)
-        let favoriteFilm = stats.favoriteFilm(from: data.media)?.title
-        let favoriteSerie = stats.favoriteSerie(from: data.media)?.title
-        let favoriteGenre = rankedGenres.first?.label
-        let favoritePlatform = rankedPlatforms.first?.label
+    private var rankedGenres: [(label: String, count: Int)] {
+        stats.rankedGenres(from: data.media)
+    }
 
+    private var rankedPlatforms: [(label: String, count: Int)] {
+        stats.rankedPlatforms(from: data.media)
+    }
+
+    private var favoriteFilm: String? {
+        stats.favoriteFilm(from: data.media)?.title
+    }
+
+    private var favoriteSerie: String? {
+        stats.favoriteSerie(from: data.media)?.title
+    }
+
+    private var favoriteGenre: String? {
+        rankedGenres.first?.label
+    }
+
+    private var favoritePlatform: String? {
+        rankedPlatforms.first?.label
+    }
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Favoris")
                 .font(.headline)
