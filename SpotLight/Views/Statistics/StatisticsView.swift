@@ -91,10 +91,14 @@ struct StatisticsView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    
-                    MediaPieChartView(title: "", data: stats.rankedGenres(from: data.media))
-                    MediaPieChartView(title: "", data: stats.rankedPlatforms(from: data.media))
-                    // TODO: more graph
+                    ScrollView(.horizontal){
+                        LazyHStack(spacing: 16) {
+                            MediaPieChartView(title: "", data: stats.rankedGenres(from: data.media))
+                                .frame(width: 300, height: 300)
+                            MediaPieChartView(title: "", data: stats.rankedPlatforms(from: data.media))
+                                .frame(width: 300, height: 300)
+                        }
+                    }
                 }
                 .padding()
                 
