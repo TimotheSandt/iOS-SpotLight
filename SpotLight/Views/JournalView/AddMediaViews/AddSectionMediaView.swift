@@ -94,7 +94,8 @@ struct AddSectionMediaView: View {
                                 Spacer()
 
                                 Button(role: .destructive) {
-                                    seasons.removeAll { $0.id == season.id }
+                                    let seasonID = season.wrappedValue.id
+                                    seasons.removeAll { $0.id == seasonID }
                                 } label: {
                                     Image(systemName: "trash")
                                 }
