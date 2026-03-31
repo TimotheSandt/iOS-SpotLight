@@ -11,7 +11,7 @@ struct ProfileHistorySectionView: View {
     @Environment(MediaViewModel.self) private var data
     @Environment(StatisticsViewModel.self) private var stats
 
-    private var recentMedia: [any Media] {
+    private var recentMedia: [ProfileHistoryItem] {
         stats.recentMedia(from: data.media)
     }
 
@@ -25,11 +25,11 @@ struct ProfileHistorySectionView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(recentMedia, id: \.id) { media in
+                ForEach(recentMedia) { item in
                     NavigationLink {
-                        MediaDetailView(mediaID: media.id)
+                        MediaDetailView(mediaID: item.mediaID)
                     } label: {
-                        ProfileHistoryRowView(media: media)
+                        ProfileHistoryRowView(item: item)
                     }
                     .buttonStyle(.plain)
                 }

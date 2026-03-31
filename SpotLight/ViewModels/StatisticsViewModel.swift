@@ -7,6 +7,15 @@
 
 import Foundation
 
+struct ProfileHistoryItem: Identifiable {
+    let id: UUID
+    let mediaID: UUID
+    let title: String
+    let subtitle: String
+    let watchedDateText: String
+    let watchCountText: String
+}
+
 @Observable
 class StatisticsViewModel {
 
@@ -150,20 +159,29 @@ class StatisticsViewModel {
         }
     }
 
-    func recentMedia(from mediaList: [any Media]) -> [any Media] {
+    func recentMedia(from mediaList: [any Media]) -> [ProfileHistoryItem] {
         mediaList
             .filter { !$0.interaction.watchHistory.isEmpty }
             .sorted { ($0.interaction.lastWatchedDate ?? .distantPast) > ($1.interaction.lastWatchedDate ?? .distantPast) }
             .prefix(5)
-            .map { $0 }
+            .map { media in
+                ProfileHistoryItem(
+                    id: media.id,
+                    mediaID: media.id,
+                    title: media.title,
+                    subtitle: media.mediaType.rawValue,
+                    watchedDateText: media.interaction.lastWatchedDate?.formatted(.dateTime.day().month().year()) ?? "-",
+                    watchCountText: "\(media.interaction.watchHistory.count)x"
+                )
+            }
     }
 
-    func favoriteFilm(from mediaList: [any Media]) -> (any Media)? {
-        favoriteMedia(for: .film, from: mediaList)
+    func favoriteFilmTitle(from mediaList: [any Media]) -> String? {
+        favoriteMedia(for: .film, from: mediaList)?.title
     }
 
-    func favoriteSerie(from mediaList: [any Media]) -> (any Media)? {
-        favoriteMedia(for: .serie, from: mediaList)
+    func favoriteSerieTitle(from mediaList: [any Media]) -> String? {
+        favoriteMedia(for: .serie, from: mediaList)?.title
     }
 
     private func makeRange(from endDate: Date, component: Calendar.Component, value: Int) -> StatsRange {

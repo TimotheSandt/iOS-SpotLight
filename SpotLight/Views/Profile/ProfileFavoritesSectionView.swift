@@ -25,11 +25,11 @@ struct ProfileFavoritesSectionView: View {
     }
 
     private var favoriteFilm: String? {
-        stats.favoriteFilm(from: data.media)?.title
+        stats.favoriteFilmTitle(from: data.media)
     }
 
     private var favoriteSerie: String? {
-        stats.favoriteSerie(from: data.media)?.title
+        stats.favoriteSerieTitle(from: data.media)
     }
 
     private var favoriteGenre: String? {
