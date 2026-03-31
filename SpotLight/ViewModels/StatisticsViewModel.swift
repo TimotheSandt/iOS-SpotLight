@@ -48,19 +48,8 @@ class StatisticsViewModel {
 
     func summary(from mediaList: [any Media]) -> GlobalStatsSummary {
         let mediaInRange = mediaList.filter(isMediaInRange)
-        let watchedMedia = mediaInRange.filter { media in
-            media.interaction.watchHistory.contains { session in
-                session.status != .wishlist && selectedRange.contains(session.date)
-            }
-        }
-        let sessions = mediaList.flatMap { media in
-            media.interaction.watchHistory.compactMap { session -> (media: any Media, session: WatchSession)? in
-                guard selectedRange.contains(session.date) else {
-                    return nil
-                }
-                return (media: media, session: session)
-            }
-        }
+        let watchedMedia = mediaInRange.filter(hasWatchedSession)
+        let sessions = mediaList.flatMap(filteredSessions)
 
         let ratedMedia = mediaInRange.compactMap { media -> Double? in
             media.interaction.note
@@ -71,12 +60,7 @@ class StatisticsViewModel {
         }.count
 
         let totalDuration = sessions.reduce(0) { partialResult, entry in
-            switch entry.session.status {
-            case .wishlist:
-                return partialResult
-            default:
-                return partialResult + entry.media.displayDuration
-            }
+            partialResult + durationForSession(media: entry.media, session: entry.session)
         }
 
         let filmCount = watchedMedia.filter { $0.mediaType == .film }.count
@@ -94,54 +78,39 @@ class StatisticsViewModel {
 
     // Chart
 
-    var chartConfiguration: ChartConfiguration {
-        let range = selectedRange
+    var strideUnit: (component: Calendar.Component, value: Int) {
         let dayCount = max(
             calendar.dateComponents(
                 [.day],
-                from: calendar.startOfDay(for: range.start),
-                to: calendar.startOfDay(for: range.end)
+                from: calendar.startOfDay(for: selectedRange.start),
+                to: calendar.startOfDay(for: selectedRange.end)
             ).day ?? 0,
             0
         ) + 1
-        let targetBars = min(max(preferredBarCount(for: dayCount), 7), 20)
 
-        if dayCount <= 20 {
-            return ChartConfiguration(component: .day, bucketSize: 1, targetBarCount: min(dayCount, 20))
+        switch selectedPeriod {
+        case .week:
+            return (.day, 1)
+        case .month:
+            return (.day, max(Int(ceil(Double(dayCount) / 10.0)), 1))
+        case .year:
+            return (.month, 1)
+        case .custom:
+            if dayCount <= 7 { return (.day, 1) }
+            if dayCount <= 31 { return (.day, max(Int(ceil(Double(dayCount) / 10.0)), 1)) }
+            if dayCount <= 180 { return (.day, max(Int(ceil(Double(dayCount) / 16.0)), 1)) }
+            if dayCount <= 365 { return (.month, 1) }
+            return (.month, 2)
         }
-
-        if dayCount <= 180 {
-            let bucketSize = max(Int(ceil(Double(dayCount) / Double(targetBars))), 1)
-            return ChartConfiguration(component: .day, bucketSize: bucketSize, targetBarCount: targetBars)
-        }
-
-        let monthCount = max(
-            calendar.dateComponents(
-                [.month],
-                from: startOfMonth(for: range.start),
-                to: startOfMonth(for: range.end)
-            ).month ?? 0,
-            0
-        ) + 1
-        let monthBucketSize = max(Int(ceil(Double(monthCount) / Double(targetBars))), 1)
-        return ChartConfiguration(component: .month, bucketSize: monthBucketSize, targetBarCount: targetBars)
     }
 
     func chartData(from mediaList: [any Media]) -> [ChartData] {
         let range = selectedRange
-        let configuration = chartConfiguration
+        let unit = strideUnit
 
         let sessions = mediaList.flatMap { media in
             media.interaction.watchHistory.compactMap { session -> (date: Date, duration: Int)? in
-                let duration: Int
-
-                switch session.status {
-                case .wishlist:
-                    duration = 0
-                default:
-                    duration = media.displayDuration
-                }
-
+                let duration = durationForSession(media: media, session: session)
                 guard range.contains(session.date), duration > 0 else {
                     return nil
                 }
@@ -150,18 +119,16 @@ class StatisticsViewModel {
         }
 
         let groupedDurations = Dictionary(grouping: sessions) { session in
-            bucketStart(for: session.date, in: range, configuration: configuration)
+            bucketDate(for: session.date, in: range, unit: unit)
         }
         .mapValues { bucketSessions in
             bucketSessions.reduce(0) { $0 + $1.duration }
         }
 
-        return bucketStarts(in: range, configuration: configuration).map { startDate in
+        return chartDates(in: range, unit: unit).map { date in
             ChartData(
-                startDate: startDate,
-                endDate: min(bucketEnd(from: startDate, configuration: configuration), range.end),
-                date: startDate,
-                duration: groupedDurations[startDate, default: 0]
+                date: date,
+                duration: groupedDurations[date, default: 0]
             )
         }
     }
@@ -301,67 +268,72 @@ class StatisticsViewModel {
         return selectedRange.contains(lastDate)
     }
 
-    private func preferredBarCount(for dayCount: Int) -> Int {
-        switch dayCount {
-        case ...7:
-            return 7
-        case ...31:
-            return 10
-        case ...90:
-            return 12
-        case ...180:
-            return 16
-        default:
-            return 20
+    private func hasWatchedSession(_ media: any Media) -> Bool {
+        media.interaction.watchHistory.contains { session in
+            session.status != .wishlist && selectedRange.contains(session.date)
         }
     }
 
-    private func bucketStarts(in range: StatsRange, configuration: ChartConfiguration) -> [Date] {
-        var starts: [Date] = []
-        var current = bucketStart(for: range.start, in: range, configuration: configuration)
+    private func filteredSessions(for media: any Media) -> [(media: any Media, session: WatchSession)] {
+        media.interaction.watchHistory.compactMap { session in
+            guard selectedRange.contains(session.date) else {
+                return nil
+            }
+            return (media: media, session: session)
+        }
+    }
+
+    private func durationForSession(media: any Media, session: WatchSession) -> Int {
+        switch session.status {
+        case .wishlist:
+            return 0
+        default:
+            return media.displayDuration
+        }
+    }
+
+    private func chartDates(
+        in range: StatsRange,
+        unit: (component: Calendar.Component, value: Int)
+    ) -> [Date] {
+        var dates: [Date] = []
+        var current = bucketDate(for: range.start, in: range, unit: unit)
 
         while current <= range.end {
-            starts.append(current)
-            guard let next = calendar.date(byAdding: configuration.component, value: configuration.bucketSize, to: current) else {
+            dates.append(current)
+            guard let next = calendar.date(byAdding: unit.component, value: unit.value, to: current) else {
                 break
             }
             current = next
         }
 
-        return starts
+        return dates
     }
 
-    private func bucketStart(for date: Date, in range: StatsRange, configuration: ChartConfiguration) -> Date {
-        switch configuration.component {
+    private func bucketDate(
+        for date: Date,
+        in range: StatsRange,
+        unit: (component: Calendar.Component, value: Int)
+    ) -> Date {
+        switch unit.component {
         case .day:
             let baseStart = calendar.startOfDay(for: range.start)
             let currentDay = calendar.startOfDay(for: date)
             let offset = calendar.dateComponents([.day], from: baseStart, to: currentDay).day ?? 0
-            let bucketOffset = (offset / configuration.bucketSize) * configuration.bucketSize
+            let bucketOffset = (offset / unit.value) * unit.value
             return calendar.date(byAdding: .day, value: bucketOffset, to: baseStart) ?? currentDay
         case .month:
             let baseMonth = startOfMonth(for: range.start)
             let currentMonth = startOfMonth(for: date)
             let offset = calendar.dateComponents([.month], from: baseMonth, to: currentMonth).month ?? 0
-            let bucketOffset = (offset / configuration.bucketSize) * configuration.bucketSize
+            let bucketOffset = (offset / unit.value) * unit.value
             return calendar.date(byAdding: .month, value: bucketOffset, to: baseMonth) ?? currentMonth
         default:
             return date
         }
     }
 
-    private func bucketEnd(from startDate: Date, configuration: ChartConfiguration) -> Date {
-        let nextStart = calendar.date(byAdding: configuration.component, value: configuration.bucketSize, to: startDate) ?? startDate
-        return nextStart.addingTimeInterval(-1)
-    }
-
     private func startOfMonth(for date: Date) -> Date {
         calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? calendar.startOfDay(for: date)
     }
-}
-
-struct ChartConfiguration {
-    let component: Calendar.Component
-    let bucketSize: Int
-    let targetBarCount: Int
 }

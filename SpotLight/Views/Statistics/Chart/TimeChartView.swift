@@ -16,10 +16,6 @@ struct TimeChartView: View {
         stats.chartData(from: data.media)
     }
 
-    private var configuration: ChartConfiguration {
-        stats.chartConfiguration
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Temps de visionnage")
@@ -36,8 +32,7 @@ struct TimeChartView: View {
                 Chart {
                     ForEach(dataPoints) { point in
                         BarMark(
-                            xStart: .value("Debut", point.startDate),
-                            xEnd: .value("Fin", point.endDate),
+                            x: .value("Date", point.date, unit: stats.strideUnit.component),
                             y: .value("Duree", point.duration)
                         )
                         .foregroundStyle(Color.blue.gradient)
@@ -46,7 +41,7 @@ struct TimeChartView: View {
                 }
                 .frame(height: 200)
                 .chartXAxis {
-                    AxisMarks(values: .stride(by: configuration.component, count: configuration.bucketSize)) { _ in
+                    AxisMarks(values: .stride(by: stats.strideUnit.component, count: stats.strideUnit.value)) { _ in
                         AxisGridLine()
                         AxisTick()
                         AxisValueLabel(format: axisFormat)
@@ -65,7 +60,7 @@ struct TimeChartView: View {
     }
 
     private var axisFormat: Date.FormatStyle {
-        if configuration.component == .month {
+        if stats.strideUnit.component == .month {
             return .dateTime.month(.abbreviated)
         }
         return .dateTime.day().month(.abbreviated)
