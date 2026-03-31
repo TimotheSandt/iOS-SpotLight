@@ -30,8 +30,6 @@ struct JournalView: View {
                 return item.interaction.isWatched
             case .watching:
                 return item.interaction.isWatching
-            case .abandoned:
-                return item.interaction.isAbandoned
             default:
                 return false
         }

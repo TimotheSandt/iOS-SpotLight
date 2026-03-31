@@ -58,11 +58,6 @@ struct MediaInteraction: Identifiable, Codable {
         !watchHistory.isEmpty && status == .watching
     }
     
-    var isAbandoned: Bool {
-        !isWishlisted && !isWatched && !isWatching
-    }
-    
-    
     
     var lastWatchedDate: Date? {
         watchHistory.map { $0.date }.max()

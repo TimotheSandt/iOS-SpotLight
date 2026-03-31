@@ -60,11 +60,11 @@ struct Film: Media {
              description: "La suite du voyage mythique de Paul Atreides.", releaseYear: 2024,
              platforms: [.canalPlus], genres: [.scifi, .drama], duration: 166),
         
-        // CAS 3 : Film abandonné
+        // CAS 3 : Film
         Film(title: "Sharknado", creator: "Anthony C. Ferrante", pays: "USA",
              description: "Des requins dans une tornade.", releaseYear: 2013,
              platforms: [.amazonPrimeVideo], genres: [.horror, .comedy], duration: 87,
-             interaction: MediaInteraction(status: .abandoned, comment: "Trop nanar pour moi."))
+             interaction: MediaInteraction(status: .watched, comment: "Trop nanar pour moi."))
     ]
         
 }

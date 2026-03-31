@@ -17,7 +17,6 @@ enum Status: String, CaseIterable, Codable {
     case wishlist = "Wishlist"
     case watching = "En cours"
     case watched = "Vu"
-    case abandoned = "Abandonné"
 }
 
 
