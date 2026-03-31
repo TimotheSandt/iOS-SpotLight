@@ -8,9 +8,12 @@
 import SwiftUI
 
 struct ProfileHistorySectionView: View {
-    let recentMedia: [any Media]
-
     var body: some View {
+        @Environment(MediaViewModel.self) var data
+        @Environment(StatisticsViewModel.self) var stats
+
+        let recentMedia = stats.recentMedia(from: data.media)
+
         VStack(alignment: .leading, spacing: 14) {
             Text("Derniers visionnages")
                 .font(.headline)

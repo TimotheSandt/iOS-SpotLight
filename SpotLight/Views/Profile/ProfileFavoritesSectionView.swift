@@ -8,17 +8,22 @@
 import SwiftUI
 
 struct ProfileFavoritesSectionView: View {
-    let favoriteFilm: String?
-    let favoriteSerie: String?
-    let favoriteGenre: String?
-    let favoritePlatform: String?
-
     private let columns = [
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12)
     ]
 
     var body: some View {
+        @Environment(MediaViewModel.self) var data
+        @Environment(StatisticsViewModel.self) var stats
+
+        let rankedGenres = stats.rankedGenres(from: data.media)
+        let rankedPlatforms = stats.rankedPlatforms(from: data.media)
+        let favoriteFilm = stats.favoriteFilm(from: data.media)?.title
+        let favoriteSerie = stats.favoriteSerie(from: data.media)?.title
+        let favoriteGenre = rankedGenres.first?.label
+        let favoritePlatform = rankedPlatforms.first?.label
+
         VStack(alignment: .leading, spacing: 14) {
             Text("Favoris")
                 .font(.headline)
