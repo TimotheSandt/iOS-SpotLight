@@ -23,7 +23,6 @@ class StatisticsViewModel {
     }
 
     // Global
-
     var selectedRange: StatsRange {
         let now = Date()
         let endOfToday = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: customEndDate) ?? customEndDate

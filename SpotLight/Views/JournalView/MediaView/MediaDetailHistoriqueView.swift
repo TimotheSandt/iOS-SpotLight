@@ -57,11 +57,3 @@ struct MediaDetailHistoriqueView: View {
         .padding(.horizontal)
     }
 }
-
-//#Preview("Film") {
-//    SimplifyMediaCardView(media: Film.testData[0], showAddInteraction: .constant(false))
-//}
-//
-//#Preview("Série") {
-//    SimplifyMediaCardView(media: Serie.testData[0], showAddInteraction: .constant(false))
-//}

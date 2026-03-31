@@ -48,7 +48,6 @@ struct JournalView: View {
                     }
                     .pickerStyle(.segmented)
                     
-                    Text("filter")
                     
                     LazyVGrid(columns: columns, spacing: 20) {
                         ForEach(data.media, id: \.id) { item in
@@ -58,9 +57,9 @@ struct JournalView: View {
                                     MediaDetailView(mediaID: item.id)
                                 } label: {
                                     MediaCardView(media: item)
-                                        .contentShape(Rectangle()) // Améliore la zone de clic
+                                        .contentShape(Rectangle())
                                 }
-                                .buttonStyle(PlainButtonStyle()) // Évite que le texte devienne tout bleu
+                                .buttonStyle(PlainButtonStyle())
                             }
                         }
                     }

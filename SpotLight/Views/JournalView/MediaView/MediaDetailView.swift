@@ -25,21 +25,23 @@ struct MediaDetailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         SimplifyMediaCardView(media: media)
-                        Button {
-                            data.toggleFavorite(for: mediaID)
-                        } label: {
-                            Label(
-                                media.interaction.isFavorite ? "Retirer des favoris" : "Definir comme favori",
-                                systemImage: media.interaction.isFavorite ? "star.slash" : "star.fill"
-                            )
-                            .font(.subheadline.bold())
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(media.interaction.isFavorite ? Color.yellow.opacity(0.2) : Color.blue.opacity(0.12))
-                            .foregroundStyle(media.interaction.isFavorite ? .yellow : .blue)
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                        if media.interaction.isWatched { // s'affiche qui si il a été vu
+                            Button {
+                                data.toggleFavorite(for: mediaID)
+                            } label: {
+                                Label(
+                                    media.interaction.isFavorite ? "Retirer des favoris" : "Definir comme favori",
+                                    systemImage: media.interaction.isFavorite ? "star.slash" : "star.fill"
+                                )
+                                .font(.subheadline.bold())
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(media.interaction.isFavorite ? Color.yellow.opacity(0.2) : Color.blue.opacity(0.12))
+                                .foregroundStyle(media.interaction.isFavorite ? .yellow : .blue)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                            }
+                            .padding(.horizontal)
                         }
-                        .padding(.horizontal)
                         MediaDetailAvisView(mediaID: mediaID)
                         MediaDetailHistoriqueView(media: media, showAddInteraction: $showAddInteraction)
                     }
@@ -68,7 +70,7 @@ struct MediaDetailView: View {
 
                     DatePicker("Date", selection: $newDate, displayedComponents: .date)
                         .labelsHidden()
-                        .datePickerStyle(.graphical) // Plus élégant dans une popup
+                        .datePickerStyle(.graphical)
                 }
                 .padding()
                 .background(Color(uiColor: .secondarySystemBackground))
@@ -88,7 +90,7 @@ struct MediaDetailView: View {
                 }
             }
             .padding()
-            .presentationDetents([.fraction(0.8)]) // S'ouvre à moitié d'écran
+            .presentationDetents([.fraction(0.8)])
             .presentationDragIndicator(.visible)
         }
     }
