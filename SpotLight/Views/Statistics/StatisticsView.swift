@@ -92,6 +92,8 @@ struct StatisticsView: View {
                     }
                 }
                 .padding()
+                
+                TimeChartView()
             }
             .navigationTitle("Statistiques")
         }

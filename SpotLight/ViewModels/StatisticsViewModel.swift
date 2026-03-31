@@ -110,4 +110,56 @@ class StatisticsViewModel {
                 return media.displayDuration
         }
     }
+    
+    
+    
+    
+    // CHART
+    
+    var strideUnit: (component: Calendar.Component, value: Int) {
+        switch selectedPeriod {
+        case .week:
+            return (.day, 1)
+        case .month:
+            return (.day, 3) // Groupement par 3 jours comme demandé
+        case .year:
+            return (.month, 1)
+        case .custom:
+            let diff = calendar.dateComponents([.day], from: customStartDate, to: customEndDate).day ?? 0
+            if diff <= 7 { return (.day, 1) }
+            if diff <= 31 { return (.day, 3) }
+            if diff <= 365 { return (.day, 7) }
+            if diff <= 365 * 2 { return (.month, 1) }
+            return (.month, 3)
+        }
+    }
+
+    func chartData(from mediaList: [any Media]) -> [ChartData] {
+        let range = selectedRange
+        let unit = strideUnit
+        
+        // 1. Extraire toutes les sessions dans la plage
+        let sessions = mediaList.flatMap { media in
+            media.interaction.watchHistory.compactMap { session -> (Date, Int)? in
+                guard range.contains(session.date) else { return nil }
+                return (session.date, durationForSession(media: media, session: session))
+            }
+        }
+        
+        // 2. Grouper les sessions selon l'unité calculée
+        let grouped = Dictionary(grouping: sessions) { (date, _) in
+            if unit.component == .day && unit.value > 1 {
+                let dayOfYear = calendar.ordinality(of: .day, in: .year, for: date) ?? 0
+                let groupedDay = (dayOfYear / unit.value) * unit.value
+                var components = calendar.dateComponents([.year], from: date)
+                components.day = groupedDay
+                return calendar.date(from: components) ?? date
+            }
+            return calendar.dateInterval(of: unit.component, for: date)?.start ?? date
+        }
+        
+        return grouped.map { (date, sessions) in
+            ChartData(date: date, duration: sessions.reduce(0) { $0 + $1.1 })
+        }.sorted { $0.date < $1.date }
+    }
 }
