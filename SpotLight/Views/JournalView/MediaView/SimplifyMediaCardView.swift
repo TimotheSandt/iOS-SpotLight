@@ -16,7 +16,6 @@ struct SimplifyMediaCardView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(.ultraThinMaterial)
                     .frame(width: 80, height: 110)
-
                 Image(systemName: media is Film ? "film" : "tv")
                     .font(.title)
                     .foregroundStyle(.secondary)
@@ -33,7 +32,7 @@ struct SimplifyMediaCardView: View {
                         .foregroundStyle(.yellow)
                 }
 
-                Text("\(media.creator) • \(String(media.releaseYear))")
+                Text("\(media.creator) ï¿½ \(String(media.releaseYear))")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 

@@ -29,11 +29,11 @@ class MediaViewModel {
     // MODIFIERS
     func addFilm(title: String, creator: String, annee: Int, duration: Int, releaseYear: Int , pays: String, platform: Platform, genres: [Genre], status: Status, note: Double?, comment: String?, date: Date?) {
         var watchHistory: [WatchSession] = []
-        if date != nil {
+        if (date != nil) {
             watchHistory.append(WatchSession(date: date!, status: .watched))
         }
         
-        let interaction = MediaInteraction(
+        let interaction: MediaInteraction = MediaInteraction(
             status: status,
             note: note,
             comment: comment,
@@ -56,11 +56,11 @@ class MediaViewModel {
     
     func addSerie(title: String, creator: String, annee: Int, duration: Int, releaseYear: Int, pays: String, platform: Platform, genres: [Genre], seasons: [Season], status: Status, note: Double?, comment: String?, date: Date?) {
         var watchHistory: [WatchSession] = []
-        if date != nil {
+        if (date != nil) {
             watchHistory.append(WatchSession(date: date!, status: .watched))
         }
         
-        let interaction = MediaInteraction(
+        let interaction: MediaInteraction = MediaInteraction(
             status: status,
             note: note,
             comment: comment,

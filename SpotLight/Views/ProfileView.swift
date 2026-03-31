@@ -13,8 +13,6 @@ struct ProfileView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     ProfileHeaderCardView()
-                    ProfileFavoritesSectionView()
-                    ProfileHistorySectionView()
                 }
                 .padding()
             }
@@ -25,7 +23,5 @@ struct ProfileView: View {
 
 #Preview {
     ProfileView()
-        .environment(MediaViewModel())
         .environment(ProfileViewModel())
-        .environment(StatisticsViewModel())
 }
