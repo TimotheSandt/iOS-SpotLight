@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ProfileView: View {
-    @Environment(MediaViewModel.self) private var data
+    @Environment(MediaViewModel.self) var data
     @Environment(ProfileViewModel.self) private var profile
 
     private var watchedMedia: [any Media] {
@@ -30,263 +30,6 @@ struct ProfileView: View {
             .map { $0 }
     }
 
-    var body: some View {
-        @Bindable var profile = profile
-
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    profileHeader(profile: profile)
-                    affinitiesSection
-                    favoritesSection
-                    historySection
-                }
-                .padding()
-            }
-            .navigationTitle("Profil")
-        }
-    }
-
-    private func profileHeader(profile: Bindable<ProfileViewModel>) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.blue.opacity(0.85), Color.cyan.opacity(0.75)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 30, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
-                .frame(width: 68, height: 68)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(profile.fullName.isEmpty ? "Profil SpotLight" : profile.fullName)
-                        .font(.title2.bold())
-                    Text("Age: \(profile.age) ans")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-            }
-
-            VStack(spacing: 12) {
-                TextField("Prenom", text: profile.$firstName)
-                    .textFieldStyle(.roundedBorder)
-
-                TextField("Nom", text: profile.$lastName)
-                    .textFieldStyle(.roundedBorder)
-
-                Stepper(value: profile.$age, in: 1...120) {
-                    Text("Age: \(profile.age) ans")
-                }
-            }
-        }
-        .padding()
-        .background(Color(uiColor: .secondarySystemBackground))
-        .cornerRadius(20)
-    }
-
-    private var affinitiesSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Genres et plateformes")
-                .font(.headline)
-
-            affinityList(
-                title: "Genres favoris",
-                items: rankedGenres
-            )
-
-            affinityList(
-                title: "Plateformes favorites",
-                items: rankedPlatforms
-            )
-        }
-        .padding()
-        .background(Color(uiColor: .secondarySystemBackground))
-        .cornerRadius(20)
-    }
-
-    private var favoritesSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Favoris")
-                .font(.headline)
-
-            favoriteBlock(title: "Film favori", media: favoriteFilm)
-            favoriteBlock(title: "Serie favorite", media: favoriteSerie)
-        }
-        .padding()
-        .background(Color(uiColor: .secondarySystemBackground))
-        .cornerRadius(20)
-    }
-
-    private var historySection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Derniers visionnages")
-                .font(.headline)
-
-            if recentMedia.isEmpty {
-                Text("Aucun visionnage pour le moment.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(recentMedia, id: \.id) { media in
-                    NavigationLink {
-                        MediaDetailView(mediaID: media.id)
-                    } label: {
-                        historyRow(for: media)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-        .padding()
-        .background(Color(uiColor: .secondarySystemBackground))
-        .cornerRadius(20)
-    }
-
-    private func affinityList(title: String, items: [(label: String, count: Int)]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.subheadline.bold())
-
-            if items.isEmpty {
-                Text("Pas encore assez de visionnages.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(items, id: \.label) { item in
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text(item.label)
-                                .font(.subheadline)
-                            Spacer()
-                            Text("\(item.count)")
-                                .font(.caption.bold())
-                                .foregroundStyle(.secondary)
-                        }
-
-                        GeometryReader { geometry in
-                            let maxCount = max(items.map(\.count).max() ?? 1, 1)
-                            let width = geometry.size.width * CGFloat(item.count) / CGFloat(maxCount)
-
-                            ZStack(alignment: .leading) {
-                                Capsule()
-                                    .fill(Color.gray.opacity(0.15))
-                                Capsule()
-                                    .fill(Color.blue.gradient)
-                                    .frame(width: max(width, 10))
-                            }
-                        }
-                        .frame(height: 10)
-                    }
-                }
-            }
-        }
-    }
-
-    private func favoriteBlock(title: String, media: (any Media)?) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.subheadline.bold())
-
-            if let media {
-                NavigationLink {
-                    MediaDetailView(mediaID: media.id)
-                } label: {
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack(spacing: 8) {
-                                Text(media.title)
-                                    .font(.headline)
-                                    .foregroundStyle(.primary)
-
-                                if media.interaction.isFavorite {
-                                    Label("Favori", systemImage: "star.fill")
-                                        .font(.caption.bold())
-                                        .foregroundStyle(.yellow)
-                                }
-                            }
-
-                            Text("\(media.creator) • \(media.releaseYear)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-
-                            Text(favoriteExplanation(for: media))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        VStack(alignment: .trailing, spacing: 4) {
-                            if let note = media.interaction.note {
-                                Text(String(format: "%.1f/5", note))
-                                    .font(.subheadline.bold())
-                            }
-
-                            Text("\(media.interaction.watchHistory.count) visionnage\(media.interaction.watchHistory.count > 1 ? "s" : "")")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding()
-                    .background(Color(uiColor: .systemBackground))
-                    .cornerRadius(16)
-                }
-                .buttonStyle(.plain)
-            } else {
-                Text("Aucun favori disponible pour l'instant.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private func historyRow(for media: any Media) -> some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(.ultraThinMaterial)
-                    .frame(width: 54, height: 72)
-
-                Image(systemName: media.mediaType == .film ? "film" : "tv")
-                    .foregroundStyle(.secondary)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(media.title)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-
-                Text(media.mediaType.rawValue)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                if let date = media.interaction.lastWatchedDate {
-                    Text(date.formatted(.dateTime.day().month().year()))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Spacer()
-
-            Text("\(media.interaction.watchHistory.count)x")
-                .font(.caption.bold())
-                .foregroundStyle(.secondary)
-        }
-        .padding()
-        .background(Color(uiColor: .systemBackground))
-        .cornerRadius(16)
-    }
-
     private var rankedGenres: [(label: String, count: Int)] {
         rankedValues(from: watchedMedia.flatMap { media in
             media.genres.map(\.rawValue)
@@ -297,6 +40,30 @@ struct ProfileView: View {
         rankedValues(from: watchedMedia.flatMap { media in
             media.platforms.map(\.rawValue)
         })
+    }
+
+    var body: some View {
+        @Bindable var profile = profile
+
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    ProfileHeaderCardView(profile: profile)
+                    ProfileAffinitiesSectionView(
+                        rankedGenres: rankedGenres,
+                        rankedPlatforms: rankedPlatforms
+                    )
+                    ProfileFavoritesSectionView(
+                        favoriteFilm: favoriteFilm,
+                        favoriteSerie: favoriteSerie,
+                        explanation: favoriteExplanation(for:)
+                    )
+                    ProfileHistorySectionView(recentMedia: recentMedia)
+                }
+                .padding()
+            }
+            .navigationTitle("Profil")
+        }
     }
 
     private func rankedValues(from values: [String]) -> [(label: String, count: Int)] {
