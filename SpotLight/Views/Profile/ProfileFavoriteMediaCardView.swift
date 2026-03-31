@@ -24,7 +24,7 @@ struct ProfileFavoriteMediaCardView: View {
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
         }
-        .frame(maxWidth: .infinity, minHeight: 90, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .padding()
         .background(Color(uiColor: .systemBackground))
         .cornerRadius(16)
