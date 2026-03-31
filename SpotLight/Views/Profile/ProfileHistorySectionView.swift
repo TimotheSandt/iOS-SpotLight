@@ -8,10 +8,10 @@
 import SwiftUI
 
 struct ProfileHistorySectionView: View {
-    var body: some View {
-        @Environment(MediaViewModel.self) var data
-        @Environment(StatisticsViewModel.self) var stats
+    @Environment(MediaViewModel.self) private var data
+    @Environment(StatisticsViewModel.self) private var stats
 
+    var body: some View {
         let recentMedia = stats.recentMedia(from: data.media)
 
         VStack(alignment: .leading, spacing: 14) {

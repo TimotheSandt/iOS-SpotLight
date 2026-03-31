@@ -8,8 +8,9 @@
 import SwiftUI
 
 struct ProfileHeaderCardView: View {
+    @Environment(ProfileViewModel.self) private var profile
+
     var body: some View {
-        @Environment(ProfileViewModel.self) var profile
         @Bindable var profile = profile
 
         VStack(alignment: .leading, spacing: 16) {

@@ -8,15 +8,15 @@
 import SwiftUI
 
 struct ProfileFavoritesSectionView: View {
+    @Environment(MediaViewModel.self) private var data
+    @Environment(StatisticsViewModel.self) private var stats
+
     private let columns = [
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12)
     ]
 
     var body: some View {
-        @Environment(MediaViewModel.self) var data
-        @Environment(StatisticsViewModel.self) var stats
-
         let rankedGenres = stats.rankedGenres(from: data.media)
         let rankedPlatforms = stats.rankedPlatforms(from: data.media)
         let favoriteFilm = stats.favoriteFilm(from: data.media)?.title
