@@ -11,13 +11,15 @@ import SwiftUI
 struct StatisticsView: View {
 
     @Environment(MediaViewModel.self) private var data
-    @StateObject private var viewModel = StatisticsViewModel()
+    @Environment(StatisticsViewModel.self) private var stats
 
     private var summary: GlobalStatsSummary {
-        viewModel.summary(from: data.media)
+        stats.summary(from: data.media)
     }
 
     var body: some View {
+        @Bindable var stats = stats
+        
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
@@ -25,21 +27,21 @@ struct StatisticsView: View {
                         Text("Periode")
                             .font(.headline)
 
-                        Picker("Periode", selection: $viewModel.selectedPeriod) {
+                        Picker("Periode", selection: $stats.selectedPeriod) {
                             ForEach(StatsPeriod.allCases) { period in
                                 Text(period.rawValue).tag(period)
                             }
                         }
                         .pickerStyle(.segmented)
 
-                        if viewModel.selectedPeriod == .custom {
+                        if stats.selectedPeriod == .custom {
                             VStack(spacing: 12) {
-                                DatePicker("Debut", selection: $viewModel.customStartDate, displayedComponents: .date)
-                                DatePicker("Fin", selection: $viewModel.customEndDate, displayedComponents: .date)
+                                DatePicker("Debut", selection: $stats.customStartDate, displayedComponents: .date)
+                                DatePicker("Fin", selection: $stats.customEndDate, displayedComponents: .date)
                             }
                         }
 
-                        Text(viewModel.rangeLabel)
+                        Text(stats.rangeLabel)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -47,22 +49,38 @@ struct StatisticsView: View {
                     .background(Color(uiColor: .secondarySystemBackground))
                     .cornerRadius(18)
 
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        StatsCardView(title: "Medias vus", value: "\(summary.watchedMediaCount)", subtitle: "au moins un visionnage termine")
-                        StatsCardView(title: "Temps passe", value: formatDuration(summary.totalDuration), subtitle: "\(summary.totalSessionsCount) session(s)")
-                        StatsCardView(title: "Note moyenne", value: summary.averageRating.map { String(format: "%.1f/5", $0) } ?? "-", subtitle: "sur les medias notes")
-                        StatsCardView(title: "Nombre d'avis", value: "\(summary.reviewCount)", subtitle: "commentaire ou note")
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()),  GridItem(.flexible())], spacing: 8) {
+                        StatsCardView(
+                            title: "Film vus",
+                            value: "\(summary.filmCount)"
+                        )
+                        
+                        StatsCardView(
+                            title: "Série vus",
+                            value: "\(summary.serieCount)"
+                        )
+                        
+                        StatsCardView(
+                            title: "Sessions",
+                            value: "\(summary.totalSessionsCount)"
+                        )
+                        
+                        StatsCardView(
+                            title: "Temps passé",
+                            value: formatDuration(summary.totalDuration)
+                        )
+                        
+                        StatsCardView(
+                            title: "Note moyenne",
+                            value: summary.averageRating.map { String(format: "%.1f/5", $0) } ?? "-"
+                        )
+                        
+                        StatsCardView(
+                            title: "Nombre d'avis",
+                            value: "\(summary.reviewCount)",
+                        )
                     }
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Repartition")
-                            .font(.headline)
-
-                        HStack(spacing: 12) {
-                            StatsHighlightView(title: "Films", value: "\(summary.filmCount)")
-                            StatsHighlightView(title: "Series", value: "\(summary.serieCount)")
-                        }
-                    }
 
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Definition")
@@ -83,4 +101,5 @@ struct StatisticsView: View {
 #Preview {
     StatisticsView()
         .environment(MediaViewModel())
+        .environment(StatisticsViewModel())
 }

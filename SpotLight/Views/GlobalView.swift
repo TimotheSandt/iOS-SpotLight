@@ -26,4 +26,5 @@ struct GlobalView: View {
 #Preview {
     GlobalView()
         .environment(MediaViewModel())
-} 
+        .environment(StatisticsViewModel())
+}

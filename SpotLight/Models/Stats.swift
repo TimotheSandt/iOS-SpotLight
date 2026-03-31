@@ -26,21 +26,19 @@ struct StatsRange {
 }
 
 struct GlobalStatsSummary {
-    let watchedMediaCount: Int
+    let filmCount: Int
+    let serieCount: Int
     let totalSessionsCount: Int
     let totalDuration: Int
     let averageRating: Double?
     let reviewCount: Int
-    let filmCount: Int
-    let serieCount: Int
 
     static let empty = GlobalStatsSummary(
-        watchedMediaCount: 0,
+        filmCount: 0,
+        serieCount: 0,
         totalSessionsCount: 0,
         totalDuration: 0,
         averageRating: nil,
-        reviewCount: 0,
-        filmCount: 0,
-        serieCount: 0
+        reviewCount: 0
     )
 }

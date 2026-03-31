@@ -8,26 +8,34 @@
 import SwiftUI
 
 
-private struct StatsCardView: View {
+struct StatsCardView: View {
     let title: String
     let value: String
-    let subtitle: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.title2)
-                .bold()
-            Text(subtitle)
                 .font(.caption)
+                .fontWeight(.medium)
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
+            
+            Text(value)
+                .font(.headline)
+                .bold()
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, minHeight: 120, alignment: .leading)
-        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
         .background(Color(uiColor: .secondarySystemBackground))
-        .cornerRadius(18)
+        .cornerRadius(12)
     }
+}
+
+
+
+#Preview {
+    StatsCardView(title: "Film vues", value: "4")
 }

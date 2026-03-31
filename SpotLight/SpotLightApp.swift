@@ -11,11 +11,13 @@ import SwiftUI
 struct SpotLightApp: App {
     
     let mediaViewModel = MediaViewModel()
+    let statsViewModel = StatisticsViewModel()
     
     var body: some Scene {
         WindowGroup {
             GlobalView()
                 .environment(mediaViewModel)
+                .environment(statsViewModel)
         }
     }
 }

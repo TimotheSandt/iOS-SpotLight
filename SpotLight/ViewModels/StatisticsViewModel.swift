@@ -7,11 +7,12 @@
 
 import Foundation
 
-final class StatisticsViewModel: ObservableObject {
+@Observable
+class StatisticsViewModel {
 
-    @Published var selectedPeriod: StatsPeriod = .month
-    @Published var customStartDate: Date
-    @Published var customEndDate: Date
+    var selectedPeriod: StatsPeriod = .month
+    var customStartDate: Date
+    var customEndDate: Date
 
     private let calendar: Calendar
 
@@ -64,13 +65,12 @@ final class StatisticsViewModel: ObservableObject {
         let serieCount = watchedMedia.filter { $0.mediaType == MediaType.serie }.count
 
         return GlobalStatsSummary(
-            watchedMediaCount: watchedMedia.count,
+            filmCount: filmCount,
+            serieCount: serieCount,
             totalSessionsCount: sessions.count,
             totalDuration: totalDuration,
             averageRating: ratedMedia.isEmpty ? nil : ratedMedia.reduce(0, +) / Double(ratedMedia.count),
-            reviewCount: reviewCount,
-            filmCount: filmCount,
-            serieCount: serieCount
+            reviewCount: reviewCount
         )
     }
 
@@ -89,7 +89,7 @@ final class StatisticsViewModel: ObservableObject {
 
     private func hasWatchedSession(_ media: any Media) -> Bool {
         media.interaction.watchHistory.contains { session in
-            session.status == .watched && selectedRange.contains(session.date)
+            session.status != .wishlist && selectedRange.contains(session.date)
         }
     }
 
