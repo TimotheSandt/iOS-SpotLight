@@ -168,7 +168,6 @@ class StatisticsViewModel {
                 if $0.count == $1.count { return $0.label < $1.label }
                 return $0.count > $1.count
             }
-            .prefix(3)
             .map { $0 }
     }
 
@@ -190,7 +189,6 @@ class StatisticsViewModel {
                 if $0.count == $1.count { return $0.label < $1.label }
                 return $0.count > $1.count
             }
-            .prefix(3)
             .map { $0 }
     }
 

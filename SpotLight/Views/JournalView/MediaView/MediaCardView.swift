@@ -9,7 +9,9 @@ import SwiftUI
 
 struct MediaCardView: View {
     
+    @Environment(MediaViewModel.self) var data
     let media: any Media
+    
 
     
     var body: some View {
@@ -72,6 +74,24 @@ struct MediaCardView: View {
                             .padding(.vertical, 4)
                             .background(.ultraThinMaterial)
                             .clipShape(Capsule())
+                    } else {
+                        Button {
+                            data.addWatchSession(for: media.id, status: .watched, date: Date())
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "plus.circle.fill")
+                                Text("Vu")
+                            }
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule()
+                                    .fill(Color.blue.gradient) // Un dégradé donne du relief
+                                    .shadow(color: .black.opacity(0.2), radius: 3)
+                            )
+                        }
                     }
                 }
                 .padding(8)
@@ -126,10 +146,12 @@ struct MediaCardView: View {
     }
 }
 
-#Preview("Film") {
+#Preview("Vu") {
     MediaCardView(media: Film.testData[0])
+        .environment(MediaViewModel())
 }
 
-#Preview("Serie") {
-    MediaCardView(media: Serie.testData[0])
+#Preview("Non Vu") {
+    MediaCardView(media: Film.testData[1])
+        .environment(MediaViewModel())
 }
